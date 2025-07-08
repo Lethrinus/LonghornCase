@@ -1,56 +1,58 @@
+
 using UnityEngine;
 using DG.Tweening;
 using Core;
 using Managers;
-using Clickables;
 
-[RequireComponent(typeof(Collider))]
-public class DispenserClickable : MonoBehaviour
+namespace Clickables
 {
-    [SerializeField] private CupController cup;
-
-    [Header("Dispenser Rotation Shake")]
-    [SerializeField] private float shakeAngleZ     = 10f;
-    [SerializeField] private float shakeDuration   = 0.5f;
-    [SerializeField] private int   shakeVibrato    = 8;
-    [SerializeField] private float shakeRandomness = 45f;
-    [SerializeField] private Ease  shakeEase       = Ease.InOutSine;
-
-    private Tween _shakeTween;
-
-    void OnMouseDown()
+    [DisallowMultipleComponent]
+    public class DispenserClickable : ClickableBase
     {
-       
-        if (GameManager.Instance.State != GameState.ClickDispenser)
+        [SerializeField] private CupController cup;
+
+        [Header("Shake Feedback")]
+        [SerializeField] float shakeAngleZ   = 10f;
+        [SerializeField] float shakeDuration = .5f;
+        [SerializeField] int   shakeVibrato  = 8;
+        [SerializeField] float shakeRandomness = 45f;
+        [SerializeField] Ease  shakeEase     = Ease.InOutSine;
+
+        private Tween _shakeTween;
+
+        public override bool CanClickNow(GameState gameState)
         {
-            transform
-                .DOShakePosition(.2f, new Vector3(.02f, .02f, .02f), 8, 45)
-                .SetEase(Ease.InOutSine);
-            return;
+            
+            return gameState == GameState.ClickDispenser
+                   && (cup.CurrentState == CupController.State.Hovering
+                       || cup.CurrentState == CupController.State.AtDispenser);
         }
 
-        
-        if (cup.CurrentState == CupController.State.Hovering)
+        protected override void OnValidClick()
         {
-            cup.Dispense();
+            if (cup.CurrentState == CupController.State.Hovering)
+            {
+               
+                cup.Dispense();
+            }
+            else 
+            {
+               
+                cup.FillColor();
+                EventBus.Publish(new DispenserClickedEvent());
+            }
+
+          
             _shakeTween?.Kill();
             _shakeTween = transform
-                .DOShakeRotation(shakeDuration, new Vector3(0, 0, shakeAngleZ), shakeVibrato, shakeRandomness, fadeOut: true)
+                .DOShakeRotation(
+                    shakeDuration,
+                    new Vector3(0f, 0f, shakeAngleZ),
+                    shakeVibrato,
+                    shakeRandomness,
+                    fadeOut: true
+                )
                 .SetEase(shakeEase);
-            return;
-        }
-
-       
-        if (cup.CurrentState == CupController.State.AtDispenser)
-        {
-            cup.FillColor();
-            EventBus.Publish(new DispenserClickedEvent());
-
-            _shakeTween?.Kill();
-            _shakeTween = transform
-                .DOShakeRotation(shakeDuration, new Vector3(0, 0, shakeAngleZ), shakeVibrato, shakeRandomness, fadeOut: true)
-                .SetEase(shakeEase);
-            return;
         }
     }
 }

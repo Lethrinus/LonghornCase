@@ -1,162 +1,153 @@
+
 using UnityEngine;
 using DG.Tweening;
 using Core;
 using Managers;
 
-namespace Clickables
-{
+namespace Clickables {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(Collider), typeof(MeshRenderer))]
-    public class CupController : MonoBehaviour
+    [RequireComponent(typeof(MeshRenderer))]
+    public class CupController : ClickableBase
     {
         public enum State { Idle, Hovering, AtDispenser, Delivered }
 
-        [Header("Initial Bounce")]
-        [SerializeField] float bounceHeight   = 0.3f;
-        [SerializeField] float bounceDuration = 0.4f;
-
-        [Header("Hover Bobbing")]
-        [SerializeField] float bobRange    = 0.05f;
-        [SerializeField] float bobDuration = 1f;
-
-        [Header("Dispense Move")]
+        [Header("Bounce")]
+        [SerializeField] float bounceHeight   = .3f;
+        [SerializeField] float bounceDuration = .4f;
+        [Header("Bob")]
+        [SerializeField] float bobRange       = .05f;
+        [SerializeField] float bobDuration    = 1f;
+        [Header("Dispense")]
         [SerializeField] Transform dispenserTarget;
         [SerializeField] float     moveDuration = 1f;
-
-        [Header("Final Color")]
+        [Header("Color")]
         [SerializeField] Color     deliveredColor = Color.blue;
+        [Header("Deliver Bob")]
+        [SerializeField] float     forwardOffset   = .1f;
+        [SerializeField] float     forwardDuration = .3f;
 
-        [Header("Deliver → Forward Bob")]
-        [SerializeField] float     deliverForwardOffset   = 0.1f;
-        [SerializeField] float     deliverForwardDuration = 0.3f;
-
-        State        _state = State.Idle;
+        MeshRenderer _renderer;
         Vector3      _origPos;
-        MeshRenderer _rend;
-        Tween        _bounceTween, _bobTween, _moveTween, _colorTween, _deliverTween;
+        State        _state = State.Idle;
+        Tween        _t1, _t2, _t3, _t4, _t5;
 
         void Awake()
         {
-            _origPos = transform.position;
-            _rend    = GetComponent<MeshRenderer>();
-        }
-
-        void OnMouseDown()
-        {
-            
-            switch (_state)
-            {
-                case State.Idle:
-                    
-                    if (GameManager.Instance.State == GameState.ClickCup)
-                        StartBounce();
-                    else
-                        InvalidClick();
-                    break;
-
-                case State.Hovering:
-                    
-                    if (GameManager.Instance.State == GameState.ReturnCup)
-                        ReturnToOrigin();
-                    else
-                        InvalidClick();
-                    break;
-
-                case State.Delivered:
-                   
-                    if (GameManager.Instance.State == GameState.ReturnCup)
-                        StartDeliverBob();
-                    else
-                        InvalidClick();
-                    break;
-
-              
-            }
+            _origPos  = transform.position;
+            _renderer = GetComponent<MeshRenderer>();
         }
 
         public State CurrentState => _state;
 
-        
+       
+        public override bool CanClickNow(GameState gameState)
+        {
+            switch (gameState)
+            {
+                case GameState.ClickCup:
+                    return _state == State.Idle;
+                case GameState.ClickDispenser:
+                    return _state == State.Hovering
+                        || _state == State.AtDispenser;
+                case GameState.ReturnCup:
+                    return _state == State.Hovering
+                        || _state == State.Delivered;
+                default:
+                    return false;
+            }
+        }
+
+       
+        protected override void OnValidClick()
+        {
+            var gs = GameManager.Instance.State;
+            switch (gs)
+            {
+                case GameState.ClickCup:
+                    StartBounce();
+                    break;
+                case GameState.ClickDispenser:
+                    if (_state == State.Hovering)
+                        Dispense();
+                    else /* AtDispenser */
+                    {
+                        FillColor();
+                        EventBus.Publish(new DispenserClickedEvent());
+                    }
+                    break;
+                case GameState.ReturnCup:
+                    if (_state == State.Hovering)
+                        ReturnHome();
+                    else /* Delivered */
+                        StartDeliverBob();
+                    break;
+            }
+        }
+
+        void StartBounce()
+        {
+            _state = State.Hovering;
+            KillTweens();
+            _t1 = transform
+                .DOMoveY(_origPos.y + bounceHeight, bounceDuration)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
+                {
+                    _t2 = transform
+                        .DOMoveY(_origPos.y + bounceHeight - bobRange, bobDuration)
+                        .SetEase(Ease.InOutSine)
+                        .SetLoops(-1, LoopType.Yoyo);
+                    EventBus.Publish(new CupClickedEvent());
+                });
+        }
+
         public void Dispense()
         {
-           
-            if (GameManager.Instance.State != GameState.ClickDispenser ||
-                _state != State.Hovering) return;
-
             _state = State.AtDispenser;
-            KillAllTweens();
-            _moveTween = transform
+            KillTweens();
+            _t3 = transform
                 .DOMove(dispenserTarget.position, moveDuration)
                 .SetEase(Ease.InOutQuad);
         }
 
-        
-
-        private void StartBounce()
+        public void FillColor()
         {
-            _state = State.Hovering;
-            KillAllTweens();
-            _bounceTween = transform
-                .DOMoveY(_origPos.y + bounceHeight, bounceDuration)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(StartBobbing);
-            EventBus.Publish(new CupClickedEvent());
+            _state = State.Delivered;
+            KillTweens();
+            _t4 = _renderer.material
+                .DOColor(deliveredColor, .5f)
+                .SetEase(Ease.InOutQuad);
         }
 
-        private void StartBobbing()
-        {
-            _bobTween = transform
-                .DOMoveY(_origPos.y + bounceHeight - bobRange, bobDuration)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo);
-        }
-
-        private void ReturnToOrigin()
+        void ReturnHome()
         {
             _state = State.Idle;
-            KillAllTweens();
+            KillTweens();
             transform
                 .DOMove(_origPos, bounceDuration)
                 .SetEase(Ease.InOutQuad)
                 .OnComplete(() => EventBus.Publish(new CupReturnedEvent()));
         }
 
-     
-        public void FillColor()
-        {
-            if (_state != State.AtDispenser) return;
-            _state = State.Delivered;
-            KillAllTweens();
-            _colorTween = _rend.material
-                .DOColor(deliveredColor, 0.5f)
-                .SetEase(Ease.InOutQuad);
-        }
-
-        private void StartDeliverBob()
+        void StartDeliverBob()
         {
             _state = State.Hovering;
-            KillAllTweens();
-            Vector3 target = _origPos + Vector3.forward * deliverForwardOffset;
-            _deliverTween = transform
-                .DOMove(target, deliverForwardDuration)
+            KillTweens();
+            Vector3 target = _origPos + Vector3.forward * forwardOffset;
+            _t5 = transform
+                .DOMove(target, forwardDuration)
                 .SetEase(Ease.OutQuad)
-                .OnComplete(StartBobbing);
+                .OnComplete(StartBounce);
         }
 
-        private void InvalidClick()
+        
+        void KillTweens()
         {
-            transform
-                .DOShakePosition(.2f, new Vector3(.02f, .02f, .02f), 8, 45)
-                .SetEase(Ease.InOutSine);
-        }
-
-        private void KillAllTweens()
-        {
-            _bounceTween?.Kill();
-            _bobTween?.Kill();
-            _moveTween?.Kill();
-            _colorTween?.Kill();
-            _deliverTween?.Kill();
+            _t1?.Kill();
+            _t2?.Kill();
+            _t3?.Kill();
+            _t4?.Kill();
+            _t5?.Kill();
         }
     }
 }
