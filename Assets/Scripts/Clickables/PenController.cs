@@ -1,168 +1,93 @@
 using UnityEngine;
 using DG.Tweening;
+using Core;
+using Managers;
 
-namespace Clickables
-{
+namespace Clickables {
     [DisallowMultipleComponent]
-    public class PenController : MonoBehaviour
-    {
-        enum State { Idle, Lifting, Hovering, Writing, Returning }
+    public class PenController : MonoBehaviour {
+        enum State { Idle, Hovering, Writing }
 
-        [Header("Path & References")]
-        [SerializeField] private Transform writePathParent;
-        
-        [SerializeField] private Transform penTip;
+        [Header("Hover")]
+        [SerializeField] float liftHeight   = .5f;
+        [SerializeField] float liftDur      = .5f;
+        [SerializeField] float wobbleY      = 15f;
+        [SerializeField] float wobbleZ      = 10f;
+        [SerializeField] float wobbleSpeed  = 1f;
+        [SerializeField] float fadeIn       = .3f;
 
-        [Header("Hover Settings")]
-        [SerializeField] private float liftHeight    = 0.5f;
-        [SerializeField] private float liftDuration  = 0.5f;
-        [SerializeField] private float angleRangeY   = 15f;
-        [SerializeField] private float angleRangeZ   = 10f;
-        [SerializeField] private float angularSpeed  = 1f;
-        [SerializeField] private float fadeDuration  = 0.5f;
+        [Header("Write Path")]
+        [SerializeField] Transform writePathParent;
+        [SerializeField] float     writeDur    = 1f;
 
-        [Header("Write Settings")]
-        [SerializeField] private float writeDuration = 2f;
-        [SerializeField] private float writeWobbleY  = 3f;
-        [SerializeField] private float writeWobbleZ  = 3f;
-        [SerializeField] private float writeWobbleDur= 0.3f;
-
-        State      _state = State.Idle;
+        Tween      _lift, _fade, _write;
         Vector3    _origPos;
         Quaternion _origRot;
-        float      _angle, _amplitude;
-        Vector3[]  _waypoints;
-        Tween      _liftTween, _fadeTween, _writeTween, _writeWobbleTween, _returnTween;
+        float      _angle, _amp;
+        Vector3[]  _wps;
+        State      _st = State.Idle;
 
-        void Awake()
-        {
+        void Awake(){
             _origPos = transform.position;
             _origRot = transform.localRotation;
-
-            var count = writePathParent.childCount;
-            _waypoints = new Vector3[count];
-            for (int i = 0; i < count; i++)
-                _waypoints[i] = writePathParent.GetChild(i).position;
+            int c = writePathParent.childCount;
+            _wps = new Vector3[c];
+            for(int i=0;i<c;i++) _wps[i] = writePathParent.GetChild(i).position;
         }
 
-        void OnMouseDown()
-        {
-            // when clicking pen 
-            if (_state == State.Idle)
-            {
-                StartHover();
+        void OnMouseDown(){
+            if(GameManager.Instance.State != GameState.ClickPen) {
+                transform.DOShakePosition(.2f,new Vector3(.02f,.02f,.02f),8,45).SetEase(Ease.InOutSine);
+                return;
             }
-            else if (_state == State.Hovering)
-            {
-                // immediately return back 
-                StartReturn();
-            }
+            
+            StartHover();
         }
 
-        void Update()
-        {
-            if (_state != State.Hovering) return;
-
-            // hover wobbling
-            _angle += angularSpeed * Time.deltaTime;
-            if (_angle > 2 * Mathf.PI) _angle -= 2 * Mathf.PI;
-            var yTilt = Mathf.Sin(_angle) * angleRangeY * _amplitude;
-            var zTilt = Mathf.Cos(_angle) * angleRangeZ * _amplitude;
-            transform.localRotation = _origRot * Quaternion.Euler(0f, yTilt, zTilt);
+        void Update(){
+            if(_st!=State.Hovering) return;
+            _angle += wobbleSpeed*Time.deltaTime;
+            if(_angle>Mathf.PI*2) _angle-=Mathf.PI*2;
+            float y = Mathf.Sin(_angle)*wobbleY*_amp;
+            float z = Mathf.Cos(_angle)*wobbleZ*_amp;
+            transform.localRotation = _origRot * Quaternion.Euler(0,y,z);
         }
 
-       // write trigger func
-        public void TriggerWrite()
-        {
-            if (_state == State.Hovering || _state == State.Lifting)
-                StartWrite();
-        }
-
-        void StartHover()
-        {
-            _state = State.Lifting;
-            _angle = _amplitude = 0f;
-            KillAllTweens();
-
-            _liftTween = transform
-                .DOMoveY(_origPos.y + liftHeight, liftDuration)
-                .SetEase(Ease.OutExpo)
-                .OnComplete(() =>
-                {
-                    _state = State.Hovering;
-                    // amplitude fade-in
-                    _fadeTween = DOTween
-                        .To(() => _amplitude, x => _amplitude = x, 1f, fadeDuration)
-                        .SetEase(Ease.InOutQuad);
+        void StartHover(){
+            _st = State.Hovering;
+            _angle=_amp=0;
+            Kill();
+            _lift = transform.DOMoveY(_origPos.y+liftHeight,liftDur).SetEase(Ease.OutQuad)
+                .OnComplete(()=>{
+                    _fade = DOTween.To(()=>_amp,x=>_amp=x,1f,fadeIn).SetEase(Ease.InOutQuad);
+                    EventBus.Publish(new PenClickedEvent());
                 });
         }
 
-        void StartWrite()
-        {
-            _state = State.Writing;
-            KillAllTweens();
-
-            // pen moves along path
-            _writeTween = transform
-                .DOPath(
-                  _waypoints,
-                  writeDuration,
-                  PathType.CatmullRom,
-                  PathMode.Full3D,
-                  resolution: 30,
-                  gizmoColor: Color.clear
-                )
-                .SetEase(Ease.InOutQuint)   // speed curve
-                .SetSpeedBased()            // stable speed
-                .SetLookAt(0.01f)           // pentip to forward
-                .OnWaypointChange(idx =>
-                {
-                    if (_writeWobbleTween == null && idx > 0)
-                    {
-                        // ❸ looser wobble
-                        _writeWobbleTween = transform
-                            .DOLocalRotate(
-                              new Vector3(
-                                  Random.Range(-writeWobbleY, writeWobbleY),
-                                  0f,
-                                  Random.Range(-writeWobbleZ, writeWobbleZ)
-                              ),
-                              writeWobbleDur
-                            )
-                            .SetEase(Ease.InOutSine)
-                            .SetLoops(-1, LoopType.Yoyo);
-                    }
-                })
-                .OnComplete(StartReturn);
-        }
-
-        void StartReturn()
-        {
-            _state = State.Returning;
-            KillAllTweens();
-
-            // position + rotation tweens simultaneously
-            _returnTween = DOTween.Sequence()
-                .Append(transform
-                    .DOMove(_origPos, liftDuration)
-                    .SetEase(Ease.OutBack))
-                .Join(transform
-                    .DORotateQuaternion(_origRot, liftDuration)
-                    .SetEase(Ease.OutBack))
-                .OnComplete(() =>
-                {
-                    _state = State.Idle;
-                    transform.localRotation = _origRot;
+        public void TriggerWrite(){
+            if(GameManager.Instance.State!=GameState.DrawBoard || _st!=State.Hovering){
+                transform.DOShakePosition(.2f,new Vector3(.02f,.02f,.02f),8,45).SetEase(Ease.InOutSine);
+                return;
+            }
+            _st=State.Writing;
+            Kill();
+            _write = transform.DOPath(_wps,writeDur,PathType.CatmullRom)
+                .SetEase(Ease.InOutSine)
+                .OnComplete(()=>{
+                    ReturnHome();
+                    EventBus.Publish(new BoardDrawnEvent());
                 });
         }
 
-        void KillAllTweens()
-        {
-            _liftTween?.Kill();
-            _fadeTween?.Kill();
-            _writeTween?.Kill();
-            _writeWobbleTween?.Kill();
-            _returnTween?.Kill();
+        void ReturnHome(){
+            _st=State.Idle;
+            Kill();
+            DOTween.Sequence()
+                .Append(transform.DOMove(_origPos,liftDur).SetEase(Ease.InOutQuad))
+                .Join(transform.DORotateQuaternion(_origRot,liftDur).SetEase(Ease.InOutQuad));
         }
+
+        void Kill(){ _lift?.Kill(); _fade?.Kill(); _write?.Kill(); }
+
     }
 }
