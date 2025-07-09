@@ -73,18 +73,28 @@ namespace Clickables {
                 });
         }
 
-        public void TriggerWrite()
+       public void TriggerWrite()
+{
+    _st = State.Writing;
+    Kill();
+
+    _write = transform
+        .DOPath(
+            _wps,
+            writeDur,
+            PathType.CatmullRom,
+            PathMode.Full3D   // <─ rotasyonu da yol yönüne kilitle
+        )
+        // “Ucunu” öne doğru 5 cm’lik look-ahead ile hizala
+        .SetLookAt(0.05f, Vector3.back, Vector3.up) 
+        .SetEase(Ease.InOutQuad)
+        .OnComplete(() =>
         {
-            _st = State.Writing;
-            Kill();
-            _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom)
-                .SetEase(Ease.InOutSine)
-                .OnComplete(() =>
-                {
-                    ReturnHome();
-                    EventBus.Publish(new BoardDrawnEvent());
-                });
-        }
+            ReturnHome();
+            EventBus.Publish(new BoardDrawnEvent());
+        });
+}
+
 
         void ReturnHome()
         {

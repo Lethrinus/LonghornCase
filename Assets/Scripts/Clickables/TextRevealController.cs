@@ -1,3 +1,4 @@
+// Assets/Scripts/TextRevealController.cs
 using UnityEngine;
 using TMPro;
 using DG.Tweening;
@@ -5,8 +6,8 @@ using DG.Tweening;
 public class TextRevealController : MonoBehaviour
 {
     [SerializeField] private TextMeshPro text;
-    [SerializeField] private float revealDuration = 1f;
-    [SerializeField] private Ease  revealEase     = Ease.Linear;
+    [SerializeField] private float        revealDuration = 3f;
+    [SerializeField] private Ease         revealEase     = Ease.Linear;
 
     void Awake()
     {

@@ -6,17 +6,17 @@ using Managers;
 
 namespace Clickables {
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(Collider))]
     public class PlantClickable : ClickableBase
     {
-        public override bool CanClickNow(GameState state)
-            => state == GameState.ClickPlant;
+        [SerializeField] CupController cup;
+
+        public override bool CanClickNow(GameState s)
+            => s == GameState.ClickPlant && cup.CurrentState == CupController.State.Delivered;
 
         protected override void OnValidClick()
         {
-          
-            transform.DOPunchScale(Vector3.one * .1f, .5f, 5, 1f)
-                .SetEase(Ease.InOutSine)
-                .OnComplete(() => EventBus.Publish(new PlantClickedEvent()));
+            cup.SendMessage("MoveToPlant");       // invoke method
         }
     }
 }

@@ -1,4 +1,4 @@
-
+// Assets/Scripts/Clickables/DispenserClickable.cs
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -11,18 +11,17 @@ namespace Clickables
     {
         [SerializeField] private CupController cup;
 
-        [Header("Shake Feedback")]
-        [SerializeField] float shakeAngleZ   = 10f;
-        [SerializeField] float shakeDuration = .5f;
-        [SerializeField] int   shakeVibrato  = 8;
-        [SerializeField] float shakeRandomness = 45f;
-        [SerializeField] Ease  shakeEase     = Ease.InOutSine;
+        [Header("Rotation-Shake Feedback")]
+        [SerializeField] float rotShakeAngle      = 10f;
+        [SerializeField] float rotShakeDuration   = .5f;
+        [SerializeField] int   rotShakeVibrato    = 8;
+        [SerializeField] float rotShakeRandomness = 45f;
+        [SerializeField] Ease  rotShakeEase       = Ease.InOutSine;
 
         private Tween _shakeTween;
 
         public override bool CanClickNow(GameState gameState)
         {
-            
             return gameState == GameState.ClickDispenser
                    && (cup.CurrentState == CupController.State.Hovering
                        || cup.CurrentState == CupController.State.AtDispenser);
@@ -32,27 +31,17 @@ namespace Clickables
         {
             if (cup.CurrentState == CupController.State.Hovering)
             {
-               
-                cup.Dispense();
+                cup.Dispense();               
             }
-            else 
+            else                             
             {
+                cup.FillColor();              
                
-                cup.FillColor();
-                EventBus.Publish(new DispenserClickedEvent());
             }
 
-          
+            
             _shakeTween?.Kill();
-            _shakeTween = transform
-                .DOShakeRotation(
-                    shakeDuration,
-                    new Vector3(0f, 0f, shakeAngleZ),
-                    shakeVibrato,
-                    shakeRandomness,
-                    fadeOut: true
-                )
-                .SetEase(shakeEase);
+           
         }
     }
 }

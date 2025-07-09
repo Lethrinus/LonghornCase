@@ -3,19 +3,18 @@ using DG.Tweening;
 using Core;
 using Managers;
 
-namespace Clickables
-{
+namespace Clickables {
     [RequireComponent(typeof(MeshRenderer))]
     public class BoardClickable : ClickableBase
     {
         [SerializeField] PenController pen;
-        MeshRenderer _r;
         TextRevealController _reveal;
+        MeshRenderer _renderer;
 
         void Awake()
         {
-            _r = GetComponent<MeshRenderer>();
-            _reveal = GetComponentInChildren<TextRevealController>();
+            _renderer = GetComponent<MeshRenderer>();
+            _reveal   = GetComponentInChildren<TextRevealController>();
         }
 
         public override bool CanClickNow(GameState state)
@@ -23,9 +22,10 @@ namespace Clickables
 
         protected override void OnValidClick()
         {
-            _r.material.DOColor(Color.black, .5f).SetEase(Ease.InOutQuad);
+            
+            _reveal?.Reveal("Hello World!");
             pen.TriggerWrite();
-            _reveal?.Reveal("hello!");
+            EventBus.Publish(new BoardDrawnEvent());
         }
     }
 }

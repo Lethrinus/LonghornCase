@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -9,27 +8,27 @@ namespace Clickables {
     [RequireComponent(typeof(MeshRenderer))]
     public class CupController : ClickableBase
     {
-        public enum State { Idle, Hovering, AtDispenser, Delivered }
+        public enum State { Idle, Hovering, AtDispenser, Delivered, AtPlant, Thrown }
 
-        [Header("Bounce")]
-        [SerializeField] float bounceHeight   = .3f;
-        [SerializeField] float bounceDuration = .4f;
-        [Header("Bob")]
-        [SerializeField] float bobRange       = .05f;
-        [SerializeField] float bobDuration    = 1f;
-        [Header("Dispense")]
+        [Header("Bounce/Bob")]
+        [SerializeField] float bounceHeight    = .3f;
+        [SerializeField] float bounceDuration  = .4f;
+        [SerializeField] float bobRange        = .05f;
+        [SerializeField] float bobDuration     = 1f;
+
+        [Header("Move Targets")]
         [SerializeField] Transform dispenserTarget;
-        [SerializeField] float     moveDuration = 1f;
-        [Header("Color")]
-        [SerializeField] Color     deliveredColor = Color.blue;
-        [Header("Deliver Bob")]
-        [SerializeField] float     forwardOffset   = .1f;
-        [SerializeField] float     forwardDuration = .3f;
+        [SerializeField] Transform plantTarget;
+        [SerializeField] Transform trashTarget;
+        [SerializeField] float     moveDuration       = 1f;
 
-        MeshRenderer _renderer;
+        [Header("Color")]
+        [SerializeField] Color     deliveredColor     = Color.blue;
+
         Vector3      _origPos;
+        MeshRenderer _renderer;
         State        _state = State.Idle;
-        Tween        _t1, _t2, _t3, _t4, _t5;
+        Tween        _tBounce, _tBob, _tDispense, _tColor, _tPlant, _tTrash;
 
         void Awake()
         {
@@ -37,9 +36,9 @@ namespace Clickables {
             _renderer = GetComponent<MeshRenderer>();
         }
 
+        /// <summary>DispenserClickable vs. diğerlerinin baktığı state</summary>
         public State CurrentState => _state;
 
-       
         public override bool CanClickNow(GameState gameState)
         {
             switch (gameState)
@@ -47,17 +46,16 @@ namespace Clickables {
                 case GameState.ClickCup:
                     return _state == State.Idle;
                 case GameState.ClickDispenser:
-                    return _state == State.Hovering
-                        || _state == State.AtDispenser;
-                case GameState.ReturnCup:
-                    return _state == State.Hovering
-                        || _state == State.Delivered;
+                    return _state == State.Hovering;
+                case GameState.ClickPlant:
+                    return _state == State.Delivered;
+                case GameState.ThrowTrash:
+                    return _state == State.AtPlant;
                 default:
                     return false;
             }
         }
 
-       
         protected override void OnValidClick()
         {
             var gs = GameManager.Instance.State;
@@ -65,21 +63,19 @@ namespace Clickables {
             {
                 case GameState.ClickCup:
                     StartBounce();
+                    EventBus.Publish(new CupClickedEvent());
                     break;
+
                 case GameState.ClickDispenser:
-                    if (_state == State.Hovering)
-                        Dispense();
-                    else /* AtDispenser */
-                    {
-                        FillColor();
-                        EventBus.Publish(new DispenserClickedEvent());
-                    }
+                    Dispense();
                     break;
-                case GameState.ReturnCup:
-                    if (_state == State.Hovering)
-                        ReturnHome();
-                    else /* Delivered */
-                        StartDeliverBob();
+
+                case GameState.ClickPlant:
+                    MoveToPlant();
+                    break;
+
+                case GameState.ThrowTrash:
+                    ThrowToTrash();
                     break;
             }
         }
@@ -87,67 +83,68 @@ namespace Clickables {
         void StartBounce()
         {
             _state = State.Hovering;
-            KillTweens();
-            _t1 = transform
+            KillAll();
+            _tBounce = transform
                 .DOMoveY(_origPos.y + bounceHeight, bounceDuration)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
-                    _t2 = transform
+                    _tBob = transform
                         .DOMoveY(_origPos.y + bounceHeight - bobRange, bobDuration)
                         .SetEase(Ease.InOutSine)
                         .SetLoops(-1, LoopType.Yoyo);
-                    EventBus.Publish(new CupClickedEvent());
                 });
         }
 
+        /// <summary>1. dispenser tıklaması: sadece hareket</summary>
         public void Dispense()
         {
             _state = State.AtDispenser;
-            KillTweens();
-            _t3 = transform
+            KillAll();
+            _tDispense = transform
                 .DOMove(dispenserTarget.position, moveDuration)
                 .SetEase(Ease.InOutQuad);
         }
 
+        
         public void FillColor()
         {
             _state = State.Delivered;
-            KillTweens();
-            _t4 = _renderer.material
+            KillAll();
+            _tColor = _renderer.material
                 .DOColor(deliveredColor, .5f)
-                .SetEase(Ease.InOutQuad);
-        }
-
-        void ReturnHome()
-        {
-            _state = State.Idle;
-            KillTweens();
-            transform
-                .DOMove(_origPos, bounceDuration)
                 .SetEase(Ease.InOutQuad)
-                .OnComplete(() => EventBus.Publish(new CupReturnedEvent()));
+                .OnComplete(()=> EventBus.Publish(new CupFilledEvent()));
         }
 
-        void StartDeliverBob()
+        void MoveToPlant()
         {
-            _state = State.Hovering;
-            KillTweens();
-            Vector3 target = _origPos + Vector3.forward * forwardOffset;
-            _t5 = transform
-                .DOMove(target, forwardDuration)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(StartBounce);
+            _state = State.AtPlant;
+            KillAll();
+            _tPlant = transform
+                .DOMove(plantTarget.position, moveDuration)
+                .SetEase(Ease.InOutQuad)
+                .OnComplete(() => EventBus.Publish(new PlantClickedEvent()));
         }
 
-        
-        void KillTweens()
+        public void ThrowToTrash()
         {
-            _t1?.Kill();
-            _t2?.Kill();
-            _t3?.Kill();
-            _t4?.Kill();
-            _t5?.Kill();
+            _state = State.Thrown;
+            KillAll();
+            _tTrash = transform
+                .DOMove(trashTarget.position, moveDuration)
+                .SetEase(Ease.InOutQuad)
+                .OnComplete(() => EventBus.Publish(new TrashThrownEvent()));
+        }
+
+        void KillAll()
+        {
+            _tBounce?.Kill();
+            _tBob?.Kill();
+            _tDispense?.Kill();
+            _tColor?.Kill();
+            _tPlant?.Kill();
+            _tTrash?.Kill();
         }
     }
 }
