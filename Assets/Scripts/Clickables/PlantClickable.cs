@@ -1,4 +1,3 @@
-// Assets/Scripts/Clickables/PlantClickable.cs
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -16,7 +15,7 @@ namespace Clickables {
 
         protected override void OnValidClick()
         {
-            cup.SendMessage("MoveToPlant");       // invoke method
+            cup.SendMessage("MoveToPlant");       
         }
     }
 }

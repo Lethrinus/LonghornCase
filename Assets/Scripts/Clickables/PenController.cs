@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -10,8 +9,8 @@ namespace Clickables {
         enum State { Idle, Hovering, Writing }
         
         
-        [SerializeField] ParticleSystem chalkDustPrefab;  // drag prefab here
-        [SerializeField] Transform dustSpawnOffset;      // empty child at pen tip
+        [SerializeField] ParticleSystem chalkDustPrefab;  
+        [SerializeField] Transform dustSpawnOffset;     
         
         
         [Header("Hover")]
@@ -46,23 +45,23 @@ namespace Clickables {
         {
             var gm = GameManager.Instance.State;
 
-            // first click brings us into Hovering
+           
             if (gm == GameState.ClickPen)
             {
                 StartHover();
             }
-            // when in DrawBoard phase...
+            
             else if (gm == GameState.DrawBoard)
             {
-                // if we're still hovering and the user clicks the pen again, cancel hover
+             
                 if (_st == State.Hovering)
                 {
-                    ReturnHome();                // send it back to original position
-                    EventBus.Publish(new HoverCancelledEvent()); // optional: notify if you need it
+                    ReturnHome();               
+                    EventBus.Publish(new HoverCancelledEvent()); 
                 }
                 else
                 {
-                    TriggerWrite();              // normal “draw on board” click
+                    TriggerWrite();            
                 }
             }
         }
@@ -95,12 +94,12 @@ namespace Clickables {
             _st = State.Writing;
             Kill();
 
-            // --- NEW: spawn dust once ---------------------------------
+           
             var fx = Instantiate(chalkDustPrefab,
                 dustSpawnOffset.position,
                 Quaternion.identity);
-            fx.Play();                         // auto-destroy after lifetime
-            // -----------------------------------------------------------
+            fx.Play();                         
+           
 
             _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom, PathMode.Full3D)
                 .SetLookAt(.05f)

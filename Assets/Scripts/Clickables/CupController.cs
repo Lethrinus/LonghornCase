@@ -24,19 +24,35 @@ namespace Clickables {
 
         [Header("Color")]
         [SerializeField] Color     deliveredColor     = Color.blue;
-
+        
+        [Header("Pour Path")]
+        [SerializeField] Transform pourPathParent;   
+        [SerializeField] float pourDuration = 1f;
+        
+        Quaternion _origRot; 
         Vector3      _origPos;
         MeshRenderer _renderer;
         State        _state = State.Idle;
         Tween        _tBounce, _tBob, _tDispense, _tColor, _tPlant, _tTrash;
-
+        Vector3[] _pourWps;
+        Color     _origColor;
+        Tween _tCancel;
+        
         void Awake()
         {
-            _origPos  = transform.position;
-            _renderer = GetComponent<MeshRenderer>();
+            _origPos   = transform.position;
+            _renderer  = GetComponent<MeshRenderer>();
+            _origRot  = transform.localRotation; 
+            _origColor = _renderer.material.color;
+
+         
+            int pc = pourPathParent.childCount;
+            _pourWps = new Vector3[pc];
+            for (int i = 0; i < pc; i++)
+                _pourWps[i] = pourPathParent.GetChild(i).position;
         }
 
-        /// <summary>DispenserClickable vs. diğerlerinin baktığı state</summary>
+      
         public State CurrentState => _state;
 
         public override bool CanClickNow(GameState gameState)
@@ -67,7 +83,10 @@ namespace Clickables {
                     break;
 
                 case GameState.ClickDispenser:
-                    Dispense();
+                    if (_state == State.Hovering)
+                        ReturnHome();
+                    else
+                        Dispense();
                     break;
 
                 case GameState.ClickPlant:
@@ -96,7 +115,7 @@ namespace Clickables {
                 });
         }
 
-        /// <summary>1. dispenser tıklaması: sadece hareket</summary>
+        
         public void Dispense()
         {
             _state = State.AtDispenser;
@@ -114,7 +133,10 @@ namespace Clickables {
             _tColor = _renderer.material
                 .DOColor(deliveredColor, .5f)
                 .SetEase(Ease.InOutQuad)
-                .OnComplete(()=> EventBus.Publish(new CupFilledEvent()));
+                .OnComplete(() => {
+                    EventBus.Publish(new CupFilledEvent());
+                    StartPour();     
+                });
         }
 
         void MoveToPlant()
@@ -136,7 +158,38 @@ namespace Clickables {
                 .SetEase(Ease.InOutQuad)
                 .OnComplete(() => EventBus.Publish(new TrashThrownEvent()));
         }
+        void StartPour()
+        {
+            
+            transform
+                .DOPath(_pourWps, pourDuration, PathType.CatmullRom, PathMode.Full3D)
+                .SetEase(Ease.InOutQuad)
+                .OnComplete(() =>
+                {
+                   
+                    _renderer.material.color = _origColor;
+                    transform.position       = _origPos; 
+                    _state = State.Idle;  
+                });
+        }
+        void ReturnHome()
+        {
+           
+            _state = State.Idle;
+            KillAll();
+            transform.DOKill();
+            _renderer.material.DOKill();
 
+           
+            DOTween.Sequence()
+                .Append(transform.DOMove(_origPos, bounceDuration)     
+                    .SetEase(Ease.InOutQuad))
+                .Join(transform.DORotateQuaternion(_origRot, bounceDuration)
+                    .SetEase(Ease.InOutQuad))
+                .OnComplete(() => {
+                    EventBus.Publish(new CupHoverCancelledEvent());
+                });
+        }
         void KillAll()
         {
             _tBounce?.Kill();

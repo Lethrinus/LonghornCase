@@ -1,4 +1,3 @@
-// Assets/Scripts/Clickables/DecorativeBounce.cs
 using UnityEngine;
 using DG.Tweening;
 using Managers;
@@ -27,16 +26,16 @@ namespace Clickables
 
         void OnMouseDown()
         {
-            // 1) Varsa aynı objede IClickable çek:
+        
             bool validClick = false;
             if (TryGetComponent<IClickable>(out var ic))
                 validClick = ic.CanClickNow(GameManager.Instance.State);
 
-            // Görev objesi & doğru aşama ise sallanma YOK — asıl animasyon oynar
+     
             if (validClick) return;
 
-            // “Yanlış aşama” (veya hiç IClickable yok) → sallama efekti
-            if (_seq != null && _seq.IsActive()) return; // zaten oynuyor
+          
+            if (_seq != null && _seq.IsActive()) return; 
 
             _seq?.Kill();
             _seq = DOTween.Sequence()

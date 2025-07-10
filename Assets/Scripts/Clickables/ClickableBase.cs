@@ -1,4 +1,4 @@
-// Assets/Scripts/Clickables/ClickableBase.cs
+
 using UnityEngine;
 using Managers;
 
@@ -13,8 +13,8 @@ namespace Clickables
         {
             var state = GameManager.Instance.State;
             if (CanClickNow(state))
-                OnValidClick();                 // DOĞRU aşama: kendi işi
-            // Yanlış aşama: hiçbir şey yapmıyoruz — DecorativeBounce ilgilenir
+                OnValidClick();               
+          
         }
     }
 }

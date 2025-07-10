@@ -5,6 +5,6 @@ namespace Core {
     public struct CupFilledEvent    {}    
     public struct PlantClickedEvent {}
     public struct TrashThrownEvent  {}
-    
     public struct HoverCancelledEvent {}
+    public struct CupHoverCancelledEvent {}
 }

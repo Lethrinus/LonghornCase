@@ -1,4 +1,4 @@
-// Assets/Scripts/TextRevealController.cs
+
 using UnityEngine;
 using TMPro;
 using DG.Tweening;

@@ -40,9 +40,9 @@ namespace Managers {
             EventBus.Subscribe<CupFilledEvent>(_         => SetState(GameState.ClickPlant));
             EventBus.Subscribe<PlantClickedEvent>(_      => SetState(GameState.ThrowTrash));
             EventBus.Subscribe<TrashThrownEvent>(_       => SetState(GameState.Completed));
-            
+            EventBus.Subscribe<CupHoverCancelledEvent>(_ => SetState(GameState.ClickCup));
             EventBus.Subscribe<HoverCancelledEvent>(_    => SetState(GameState.ClickPen));
-        }
+        }   
 
         void OnDisable()
         {
@@ -52,7 +52,7 @@ namespace Managers {
             EventBus.Unsubscribe<CupFilledEvent>(_         => SetState(GameState.ClickPlant));
             EventBus.Unsubscribe<PlantClickedEvent>(_      => SetState(GameState.ThrowTrash));
             EventBus.Unsubscribe<TrashThrownEvent>(_       => SetState(GameState.Completed));
-    
+            EventBus.Unsubscribe<CupHoverCancelledEvent>(_ => SetState(GameState.ClickCup));
             EventBus.Unsubscribe<HoverCancelledEvent>(_    => SetState(GameState.ClickPen));
         }
 
