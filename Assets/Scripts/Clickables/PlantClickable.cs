@@ -1,21 +1,23 @@
 using UnityEngine;
-using DG.Tweening;
 using Core;
+using Clickables;
 using Managers;
 
 namespace Clickables {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
-    public class PlantClickable : ClickableBase
-    {
-        [SerializeField] CupController cup;
+    public class PlantClickable : ClickableBase {
+        [SerializeField] private CupController cup;
 
-        public override bool CanClickNow(GameState s)
-            => s == GameState.ClickPlant && cup.CurrentState == CupController.State.Delivered;
+        public override bool CanClickNow(GameState gs) {
+            return gs == GameState.ClickPlant
+                   && (cup.CurrentState == CupController.State.Floating
+                       || cup.CurrentState == CupController.State.AtPlant);
+        }
 
-        protected override void OnValidClick()
-        {
-            cup.SendMessage("MoveToPlant");       
+        protected override void OnValidClick() {
+        
+            cup.StartPour();
         }
     }
 }

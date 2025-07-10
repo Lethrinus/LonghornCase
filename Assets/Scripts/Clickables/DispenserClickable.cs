@@ -1,39 +1,22 @@
 using UnityEngine;
-using DG.Tweening;
 using Core;
+using Clickables;
 using Managers;
 
-namespace Clickables
-{
+namespace Clickables {
     [DisallowMultipleComponent]
-    public class DispenserClickable : ClickableBase
-    {
-        [SerializeField] private CupController cup;
-        private Tween _shakeTween;
+    [RequireComponent(typeof(Collider))]
+    public class DispenserClickable : ClickableBase {
+        [SerializeField] CupController cup;
 
-        public override bool CanClickNow(GameState gameState)
-        {
-            return gameState == GameState.ClickDispenser 
-                   && (cup.CurrentState == CupController.State.Hovering 
-                       ||   cup.CurrentState == CupController.State.AtDispenser) 
-                   && cup.CurrentState != CupController.State.Delivered;
-        }
+        public override bool CanClickNow(GameState gs) =>
+            gs == GameState.ClickDispenser &&
+            (cup.CurrentState == CupController.State.Hovering ||
+             cup.CurrentState == CupController.State.AtDispenser);
 
-        protected override void OnValidClick()
-        {
-            if (cup.CurrentState == CupController.State.Hovering)
-            {
-                cup.Dispense();               
-            }
-            else                             
-            {
-                cup.FillColor();              
-               
-            }
-
-            
-            _shakeTween?.Kill();
-           
+        protected override void OnValidClick() {
+            if      (cup.CurrentState == CupController.State.Hovering)     cup.MoveToDispenser();
+            else if (cup.CurrentState == CupController.State.AtDispenser)  cup.FillWater();
         }
     }
 }
