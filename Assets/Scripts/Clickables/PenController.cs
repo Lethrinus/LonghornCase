@@ -8,7 +8,12 @@ namespace Clickables {
     public class PenController : ClickableBase
     {
         enum State { Idle, Hovering, Writing }
-
+        
+        
+        [SerializeField] ParticleSystem chalkDustPrefab;  // drag prefab here
+        [SerializeField] Transform dustSpawnOffset;      // empty child at pen tip
+        
+        
         [Header("Hover")]
         [SerializeField] float liftHeight = .5f, liftDur = .5f;
         [SerializeField] float wobbleY = 15f, wobbleZ = 10f, wobbleSpeed = 1f, fadeIn = .3f;
@@ -40,13 +45,25 @@ namespace Clickables {
         protected override void OnValidClick()
         {
             var gm = GameManager.Instance.State;
+
+            // first click brings us into Hovering
             if (gm == GameState.ClickPen)
             {
                 StartHover();
             }
-            else // DrawBoard
+            // when in DrawBoard phase...
+            else if (gm == GameState.DrawBoard)
             {
-                TriggerWrite();
+                // if we're still hovering and the user clicks the pen again, cancel hover
+                if (_st == State.Hovering)
+                {
+                    ReturnHome();                // send it back to original position
+                    EventBus.Publish(new HoverCancelledEvent()); // optional: notify if you need it
+                }
+                else
+                {
+                    TriggerWrite();              // normal “draw on board” click
+                }
             }
         }
 
@@ -73,27 +90,27 @@ namespace Clickables {
                 });
         }
 
-       public void TriggerWrite()
-{
-    _st = State.Writing;
-    Kill();
-
-    _write = transform
-        .DOPath(
-            _wps,
-            writeDur,
-            PathType.CatmullRom,
-            PathMode.Full3D   // <─ rotasyonu da yol yönüne kilitle
-        )
-        // “Ucunu” öne doğru 5 cm’lik look-ahead ile hizala
-        .SetLookAt(0.05f, Vector3.back, Vector3.up) 
-        .SetEase(Ease.InOutQuad)
-        .OnComplete(() =>
+        public void TriggerWrite()
         {
-            ReturnHome();
-            EventBus.Publish(new BoardDrawnEvent());
-        });
-}
+            _st = State.Writing;
+            Kill();
+
+            // --- NEW: spawn dust once ---------------------------------
+            var fx = Instantiate(chalkDustPrefab,
+                dustSpawnOffset.position,
+                Quaternion.identity);
+            fx.Play();                         // auto-destroy after lifetime
+            // -----------------------------------------------------------
+
+            _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom, PathMode.Full3D)
+                .SetLookAt(.05f)
+                .SetEase(Ease.InOutQuad)
+                .OnComplete(() =>
+                {
+                    ReturnHome();
+                    EventBus.Publish(new BoardDrawnEvent());
+                });
+        }
 
 
         void ReturnHome()

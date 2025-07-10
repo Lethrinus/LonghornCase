@@ -23,7 +23,7 @@ namespace Clickables {
         protected override void OnValidClick()
         {
             
-            _reveal?.Reveal("Hello World!");
+            _reveal?.Reveal("hello world!");
             pen.TriggerWrite();
             EventBus.Publish(new BoardDrawnEvent());
         }
