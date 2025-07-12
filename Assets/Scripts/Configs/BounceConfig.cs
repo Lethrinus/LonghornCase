@@ -1,4 +1,4 @@
-// Assets/Scripts/Config/BounceConfig.cs
+
 using UnityEngine;
 using DG.Tweening;
 

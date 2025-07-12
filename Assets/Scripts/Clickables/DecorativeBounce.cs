@@ -4,7 +4,7 @@ using Managers;
 
 namespace Clickables
 {
-    // DecorativeBounce.cs  (only the changed bits)
+   
     [RequireComponent(typeof(Collider))]
     public class DecorativeBounce : MonoBehaviour
     {

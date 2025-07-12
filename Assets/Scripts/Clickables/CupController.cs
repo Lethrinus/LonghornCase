@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -38,7 +39,7 @@ namespace Clickables {
         [SerializeField] Transform pourPathParent;
         [SerializeField] float pourDur = 1f, waitAfterPour = .25f, fadeBackDur = .5f;
 
-        /*──────── Alanlar ────────*/
+       
         Vector3      _origPos;
         Quaternion   _origRot;
         MeshRenderer _mr;
@@ -50,7 +51,7 @@ namespace Clickables {
         Tween          _followTween;
         public State CurrentState => _st;
 
-        /*──────── Kurulum ────────*/
+      
         void Awake() {
             _origPos = transform.position;
             _origRot = transform.localRotation;
@@ -63,7 +64,7 @@ namespace Clickables {
                 _pourWps[i] = pourPathParent.GetChild(i).position;
         }
 
-        /*──────── Click izinleri ────────*/
+      
         public override bool CanClickNow(GameState gs) => gs switch {
             GameState.ClickCup       => _st is State.Idle or State.Hovering,          
             GameState.ClickDispenser => _st == State.Hovering,                        
@@ -72,7 +73,7 @@ namespace Clickables {
             _                        => false
         };
 
-        /*──────── Click davranışı ────────*/
+        
         protected override void OnValidClick() {
             var gs = GameManager.Instance.State;
 
@@ -83,8 +84,8 @@ namespace Clickables {
                     break;
 
               case GameState.ClickDispenser:
-            if (_st == State.Hovering) ReturnHome();   // yalnızca Hovering’e dön
-            // _st == AtDispenser yolu artık buraya hiç gelmez
+            if (_st == State.Hovering) ReturnHome();   
+           
             break;
                 
                 case GameState.ClickPlant:
@@ -120,22 +121,20 @@ namespace Clickables {
 
         public void FillWater() {
             _st = State.Delivered;
-            Kill();                      // ↖ var olan tween’leri durdurur
+            Kill();                      
 
-            // 1) su akışı başlat
-            _activeStream = waterStreamPool.Play(fillOrigin.position, fillOrigin.rotation);
+            
             _followTween  = DOTween.To(()=>0f,_=> {
                 if (_activeStream) {
                     _activeStream.transform.position = fillOrigin.position;
                     _activeStream.transform.rotation = fillOrigin.rotation;
                 }
             },0f, .4f).SetEase(Ease.Linear);
-
-            // 2) renk değişikliği + event
+            
             _t0 = _mr.material.DOColor(filledColor, .4f)
                 .SetEase(Ease.InOutQuad)
                 .OnComplete(() => {
-                    StopStream();
+                    
                     EventBus.Publish(new CupFilledEvent());
                 });
         }
@@ -177,35 +176,49 @@ namespace Clickables {
                    });
         }
 
-        public void StartPour() {
+        public void StartPour()
+        {
             _st = State.AtPlant;
             Kill();
 
-            // 1) su akışı başlat
-            _activeStream = waterStreamPool.Play(pourOrigin.position, pourOrigin.rotation);
-            _followTween  = DOTween.To(()=>0f,_=> {
-                if (_activeStream) {
-                    _activeStream.transform.position = pourOrigin.position;
-                    _activeStream.transform.rotation = pourOrigin.rotation;
-                }
-            },0f, pourDur).SetEase(Ease.Linear);
+         
+            int  n   = _pourWps.Length;
+            var  wps = new Vector3[n + 1];
+            wps[0] = transform.position;
+            Array.Copy(_pourWps, 0, wps, 1, n);
 
-            // 2) dökme patikası
-            transform.DOPath(_pourWps, pourDur, PathType.CatmullRom, PathMode.Full3D)
-                .SetEase(Ease.InOutQuad)
+           
+       
+            Quaternion startRot = transform.localRotation;
+            Quaternion endRot   = startRot * Quaternion.Euler(-90, 0, 0);
+
+            DOTween.Sequence()
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
+                .Append(
+                    transform.DOPath(wps, pourDur, PathType.CatmullRom)
+                        .SetEase(Ease.InOutQuad)
+                        .SetLookAt(0.02f))              
+                .Join(
+                    transform.DORotateQuaternion(endRot, pourDur * .9f)
+                        .SetEase(Ease.InOutQuad))
                 .OnComplete(PourFinished);
         }
 
+
        
-        void PourFinished() {
-            StopStream();                         // ← akışı durdur
+        void PourFinished()
+        {
             EventBus.Publish(new PlantClickedEvent());
 
-            Quaternion downRot = _origRot * Quaternion.Euler(90,0,0);
+            Quaternion downRot = _origRot * Quaternion.Euler(90, 0, 0);
             DOTween.Sequence()
                 .AppendInterval(waitAfterPour)
-                .Append(_mr.material.DOColor(_origCol, fadeBackDur).SetEase(Ease.InOutQuad))
-                .Join (transform.DORotateQuaternion(downRot,fadeBackDur).SetEase(Ease.InOutQuad))
+                .Append(_mr.material
+                    .DOColor(_origCol, fadeBackDur)
+                    .SetEase(Ease.InOutQuad))
+                .Join(transform
+                    .DORotateQuaternion(downRot, fadeBackDur)
+                    .SetEase(Ease.InOutQuad))
                 .OnComplete(StartPostPourBob);
         }
         void StartPostPourBob() {
@@ -232,13 +245,8 @@ namespace Clickables {
                        gameObject.SetActive(false);                              
                    });
         }
-        void StopStream() {
-            _followTween?.Kill();
-            if (_activeStream)
-                _activeStream.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-            _activeStream = null;
-        }
+       
 
-        void Kill() { _t0?.Kill(); _t1?.Kill(); StopStream(); }
+        void Kill() { _t0?.Kill(); _t1?.Kill(); ; }
     }
 }

@@ -5,25 +5,26 @@ using Core;
 using Managers;
 
 namespace Clickables {
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(Collider))]
     public class PenController : ClickableBase
     {
         enum State { Idle, Hovering, Writing }
-        
-        // Static event'ler oluştur
-        static readonly PenClickedEvent CachedPenEvent = new();
-        static readonly BoardDrawnEvent CachedBoardEvent = new();
+
+     
+        static readonly PenClickedEvent     CachedPenEvent   = new();
+        static readonly BoardDrawnEvent     CachedBoardEvent = new();
         static readonly HoverCancelledEvent CachedHoverEvent = new();
 
+        [Header("VFX")]
+        [SerializeField] ParticleSystem chalkDustPrefab;
+        [SerializeField] Transform       dustSpawnOffset;
 
-        [SerializeField] ParticleSystem chalkDustPrefab;  
-        [SerializeField] Transform dustSpawnOffset;     
-        
-        
-        
         [Header("Audio")]
-        [SerializeField] AudioSource scribbleSrc;     
-        [SerializeField] AudioClip   scribbleClip;    
-        
+        [SerializeField] AudioSource sfxSrc;      
+        [SerializeField] AudioClip   clickClip;    
+        [SerializeField] AudioClip   scribbleClip; 
+
         [Header("Hover")]
         [SerializeField] float liftHeight = .5f, liftDur = .5f;
         [SerializeField] float wobbleY = 15f, wobbleZ = 10f, wobbleSpeed = 1f, fadeIn = .3f;
@@ -32,53 +33,51 @@ namespace Clickables {
         [SerializeField] Transform writePathParent;
         [SerializeField] float     writeDur = 1f;
 
-        Tween _lift, _fade, _write;
-        Vector3    _origPos;
-        Quaternion _origRot;
-        float      _angle, _amp;
-        Vector3[]  _wps;
-        State      _st = State.Idle;
+        /*──────── Runtime ────────*/
+        Tween        _lift, _fade, _write;
+        Vector3      _origPos;
+        Quaternion   _origRot;
+        float        _angle, _amp;
+        Vector3[]    _wps;
+        State        _st  = State.Idle;
+        Collider     _col;    
 
         void Awake()
         {
             _origPos = transform.position;
             _origRot = transform.localRotation;
-    
-           
+            _col     = GetComponent<Collider>();
+
             int c = writePathParent.childCount;
             _wps = new Vector3[c];
-    
-            
-            for (int i = 0; i < c; i++)
+            for (int i = 0; i < c; ++i)
                 _wps[i] = writePathParent.GetChild(i).position;
-            
-            writePathParent = null;
+
+            writePathParent = null;         
         }
 
-        public override bool CanClickNow(GameState state)
-            => state == GameState.ClickPen || state == GameState.DrawBoard && _st == State.Hovering;
-
+        public override bool CanClickNow(GameState gs)
+            => (gs == GameState.ClickPen) ||
+               (gs == GameState.DrawBoard && _st == State.Hovering);
+        
         protected override void OnValidClick()
         {
-            var gm = GameManager.Instance.State;
+            var gs = GameManager.Instance.State;
 
-           
-            if (gm == GameState.ClickPen)
+            if (gs == GameState.ClickPen)
             {
                 StartHover();
             }
-            
-            else if (gm == GameState.DrawBoard)
+            else if (gs == GameState.DrawBoard)
             {
-             
                 if (_st == State.Hovering)
                 {
-                    ReturnHome();               
+                    ReturnHome();
                     EventBus.Publish(CachedHoverEvent);
                 }
                 else
                 {
-                    TriggerWrite();            
+                    TriggerWrite();
                 }
             }
         }
@@ -88,6 +87,7 @@ namespace Clickables {
             if (_st != State.Hovering) return;
             _angle += wobbleSpeed * Time.deltaTime;
             if (_angle > Mathf.PI * 2) _angle -= Mathf.PI * 2;
+
             float y = Mathf.Sin(_angle) * wobbleY * _amp;
             float z = Mathf.Cos(_angle) * wobbleZ * _amp;
             transform.localRotation = _origRot * Quaternion.Euler(0, y, z);
@@ -95,18 +95,22 @@ namespace Clickables {
 
         void StartHover()
         {
-            _st = State.Hovering;
-            _angle = _amp = 0;
+            _st   = State.Hovering;
+            _amp  = _angle = 0;
             Kill();
-            
+
+         
+            if (clickClip) sfxSrc.PlayOneShot(clickClip);
+
+           
+            _col.Lock(liftDur);
+
             _lift = transform.DOMoveY(_origPos.y + liftHeight, liftDur)
                 .SetEase(Ease.OutQuad)
-                .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
                 .OnComplete(() =>
                 {
-                    _fade = DOTween.To(() => _amp, x => _amp = x, 1f, fadeIn)
-                        .SetEase(Ease.InOutQuad)
-                        .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+                    _fade = DOTween.To(() => _amp, v => _amp = v, 1f, fadeIn)
+                        .SetEase(Ease.InOutQuad);
                     EventBus.Publish(CachedPenEvent);
                 });
         }
@@ -115,10 +119,8 @@ namespace Clickables {
         {
             _st = State.Writing;
             Kill();
-
-            // Bir kez kontrol et ve referansı sakla
-            if (scribbleSrc != null && scribbleClip != null)
-                scribbleSrc.Play();
+            
+            if (scribbleClip) sfxSrc.PlayOneShot(scribbleClip);
 
             _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom)
                 .SetLookAt(.05f)
