@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7797cbdc206c64e4b9c4a79112de6f4e, type: 3}
+  m_Name: Desk Config
+  m_EditorClassIdentifier: 
+  jumpPower: 0.08
+  jumpDuration: 0.35
+  jumpEase: 9
+  posShake: {x: 0.01, y: 0.01, z: 0.01}
+  posVibrato: 10
+  posRandomness: 60
+  rotShake: {x: 4, y: 2, z: 4}
+  rotVibrato: 12
+  rotRandomness: 45
+  commonEase: 4

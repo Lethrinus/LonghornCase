@@ -1,3 +1,4 @@
+using Audio;
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -8,10 +9,20 @@ namespace Clickables {
     {
         enum State { Idle, Hovering, Writing }
         
-        
+        // Static event'ler oluştur
+        static readonly PenClickedEvent CachedPenEvent = new();
+        static readonly BoardDrawnEvent CachedBoardEvent = new();
+        static readonly HoverCancelledEvent CachedHoverEvent = new();
+
+
         [SerializeField] ParticleSystem chalkDustPrefab;  
         [SerializeField] Transform dustSpawnOffset;     
         
+        
+        
+        [Header("Audio")]
+        [SerializeField] AudioSource scribbleSrc;     
+        [SerializeField] AudioClip   scribbleClip;    
         
         [Header("Hover")]
         [SerializeField] float liftHeight = .5f, liftDur = .5f;
@@ -32,10 +43,16 @@ namespace Clickables {
         {
             _origPos = transform.position;
             _origRot = transform.localRotation;
+    
+           
             int c = writePathParent.childCount;
             _wps = new Vector3[c];
+    
+            
             for (int i = 0; i < c; i++)
                 _wps[i] = writePathParent.GetChild(i).position;
+            
+            writePathParent = null;
         }
 
         public override bool CanClickNow(GameState state)
@@ -57,7 +74,7 @@ namespace Clickables {
                 if (_st == State.Hovering)
                 {
                     ReturnHome();               
-                    EventBus.Publish(new HoverCancelledEvent()); 
+                    EventBus.Publish(CachedHoverEvent);
                 }
                 else
                 {
@@ -81,11 +98,16 @@ namespace Clickables {
             _st = State.Hovering;
             _angle = _amp = 0;
             Kill();
-            _lift = transform.DOMoveY(_origPos.y + liftHeight, liftDur).SetEase(Ease.OutQuad)
+            
+            _lift = transform.DOMoveY(_origPos.y + liftHeight, liftDur)
+                .SetEase(Ease.OutQuad)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
                 .OnComplete(() =>
                 {
-                    _fade = DOTween.To(() => _amp, x => _amp = x, 1f, fadeIn).SetEase(Ease.InOutQuad);
-                    EventBus.Publish(new PenClickedEvent());
+                    _fade = DOTween.To(() => _amp, x => _amp = x, 1f, fadeIn)
+                        .SetEase(Ease.InOutQuad)
+                        .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+                    EventBus.Publish(CachedPenEvent);
                 });
         }
 
@@ -94,21 +116,29 @@ namespace Clickables {
             _st = State.Writing;
             Kill();
 
-           
-            var fx = Instantiate(chalkDustPrefab,
-                dustSpawnOffset.position,
-                Quaternion.identity);
-            fx.Play();                         
-           
+            // Bir kez kontrol et ve referansı sakla
+            if (scribbleSrc != null && scribbleClip != null)
+                scribbleSrc.Play();
 
-            _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom, PathMode.Full3D)
+            _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom)
                 .SetLookAt(.05f)
                 .SetEase(Ease.InOutQuad)
-                .OnComplete(() =>
-                {
-                    ReturnHome();
-                    EventBus.Publish(new BoardDrawnEvent());
-                });
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
+                .OnWaypointChange(OnWriteWaypointChanged)
+                .OnComplete(OnWriteComplete);
+        }
+
+
+        void OnWriteWaypointChanged(int idx)
+        {
+            if (idx == 5)
+                EventBus.Publish(new SfxEvent(scribbleClip, 1f));
+        }
+
+        void OnWriteComplete()
+        {
+            ReturnHome();
+            EventBus.Publish(CachedBoardEvent);
         }
 
 
