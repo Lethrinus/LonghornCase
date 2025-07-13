@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Core;
 
@@ -12,9 +13,20 @@ namespace Managers {
         ThrowTrash,   
         Completed
     }
+
     public class GameManager : MonoBehaviour {
         public static GameManager Instance { get; private set; }
         public GameState State { get; private set; }
+
+    
+        static readonly Action<PenClickedEvent>        _onPenClicked        = _ => Instance.SetState(GameState.DrawBoard);
+        static readonly Action<BoardDrawnEvent>        _onBoardDrawn       = _ => Instance.SetState(GameState.ClickCup);
+        static readonly Action<CupClickedEvent>        _onCupClicked       = _ => Instance.SetState(GameState.ClickDispenser);
+        static readonly Action<CupFilledEvent>         _onCupFilled        = _ => Instance.SetState(GameState.ClickPlant);
+        static readonly Action<PlantClickedEvent>      _onPlantClicked     = _ => Instance.SetState(GameState.ThrowTrash);
+        static readonly Action<TrashThrownEvent>       _onTrashThrown      = _ => Instance.SetState(GameState.Completed);
+        static readonly Action<CupHoverCancelledEvent> _onCupHoverCancel   = _ => Instance.SetState(GameState.ClickCup);
+        static readonly Action<HoverCancelledEvent>    _onHoverCancelled   = _ => Instance.SetState(GameState.ClickPen);
 
         void Awake() {
             if (Instance == null) {
@@ -32,30 +44,26 @@ namespace Managers {
             State = s;
         }
 
-        void OnEnable()
-        {
-            EventBus.Subscribe<PenClickedEvent>(_        => SetState(GameState.DrawBoard));
-            EventBus.Subscribe<BoardDrawnEvent>(_        => SetState(GameState.ClickCup));
-            EventBus.Subscribe<CupClickedEvent>(_        => SetState(GameState.ClickDispenser));
-            EventBus.Subscribe<CupFilledEvent>(_         => SetState(GameState.ClickPlant));
-            EventBus.Subscribe<PlantClickedEvent>(_      => SetState(GameState.ThrowTrash));
-            EventBus.Subscribe<TrashThrownEvent>(_       => SetState(GameState.Completed));
-            EventBus.Subscribe<CupHoverCancelledEvent>(_ => SetState(GameState.ClickCup));
-            EventBus.Subscribe<HoverCancelledEvent>(_    => SetState(GameState.ClickPen));
-        }   
-
-        void OnDisable()
-        {
-            EventBus.Unsubscribe<PenClickedEvent>(_        => SetState(GameState.DrawBoard));
-            EventBus.Unsubscribe<BoardDrawnEvent>(_        => SetState(GameState.ClickCup));
-            EventBus.Unsubscribe<CupClickedEvent>(_        => SetState(GameState.ClickDispenser));
-            EventBus.Unsubscribe<CupFilledEvent>(_         => SetState(GameState.ClickPlant));
-            EventBus.Unsubscribe<PlantClickedEvent>(_      => SetState(GameState.ThrowTrash));
-            EventBus.Unsubscribe<TrashThrownEvent>(_       => SetState(GameState.Completed));
-            EventBus.Unsubscribe<CupHoverCancelledEvent>(_ => SetState(GameState.ClickCup));
-            EventBus.Unsubscribe<HoverCancelledEvent>(_    => SetState(GameState.ClickPen));
+        void OnEnable() {
+            EventBus.Subscribe(_onPenClicked);
+            EventBus.Subscribe(_onBoardDrawn);
+            EventBus.Subscribe(_onCupClicked);
+            EventBus.Subscribe(_onCupFilled);
+            EventBus.Subscribe(_onPlantClicked);
+            EventBus.Subscribe(_onTrashThrown);
+            EventBus.Subscribe(_onCupHoverCancel);
+            EventBus.Subscribe(_onHoverCancelled);
         }
 
-      
+        void OnDisable() {
+            EventBus.Unsubscribe(_onPenClicked);
+            EventBus.Unsubscribe(_onBoardDrawn);
+            EventBus.Unsubscribe(_onCupClicked);
+            EventBus.Unsubscribe(_onCupFilled);
+            EventBus.Unsubscribe(_onPlantClicked);
+            EventBus.Unsubscribe(_onTrashThrown);
+            EventBus.Unsubscribe(_onCupHoverCancel);
+            EventBus.Unsubscribe(_onHoverCancelled);
+        }
     }
 }
