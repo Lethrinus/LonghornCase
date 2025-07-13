@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   jumpPower: 0.1
   jumpDuration: 0.25
-  jumpEase: 9
+  jumpEase: 1
   clip: {fileID: 8300000, guid: 9ba5dc6a7bcc03347a4416da575754d3, type: 3}
   volume: 0.1
   pitch: 2
-  posShake: {x: 0.01, y: 0.01, z: 0.01}
-  posVibrato: 10
-  posRandomness: 60
-  rotShake: {x: 5, y: 0, z: 5}
+  posShake: {x: 0.02, y: 0, z: 0.02}
+  posVibrato: 0
+  posRandomness: 100
+  rotShake: {x: 2, y: 0, z: 2}
   rotVibrato: 12
   rotRandomness: 45
-  commonEase: 4
+  commonEase: 1

@@ -14,7 +14,6 @@ namespace Clickables {
         }
 
         [Header("Water Particles")]
-        [SerializeField] ParticlePool waterStreamPool;
         [SerializeField] Transform    fillOrigin;
         [SerializeField] Transform    pourOrigin;
 
@@ -76,8 +75,15 @@ namespace Clickables {
             switch (gs) {
                 case GameState.ClickCup:
                 case GameState.ClickDispenser:
-                    if (_st == State.Idle)        StartHover();
-                    else if (_st == State.Hovering) ReturnHome();
+                    if (_st == State.Idle) { // start hovering – play click
+                        if (clickClip != null) 
+                            EventBus.Publish(new SfxEvent(clickClip, clickVolume, clickPitch));
+                        StartHover();
+                    }
+                    else if (_st == State.Hovering) {
+                        // cancel hover – **no click SFX** (DecorativeBounce will handle the thud)
+                        ReturnHome();
+                    }
                     break;
 
                 case GameState.ClickPlant:
@@ -117,7 +123,7 @@ namespace Clickables {
             DOTween.Kill(transform);
             Kill();
 
-            // move AND rotate back in one sequence (just like PenController)
+            // move AND rotate back in one sequence
             DOTween.Sequence()
                 .Append(transform.DOMove(_origPos, hoverDur).SetEase(Ease.InOutQuad))
                 .Join(transform.DORotateQuaternion(_origRot, hoverDur).SetEase(Ease.InOutQuad))

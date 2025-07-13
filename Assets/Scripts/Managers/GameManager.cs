@@ -32,13 +32,12 @@ namespace Managers {
             if (Instance == null) {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
+                SetState(GameState.ClickPen);
             }
             else Destroy(gameObject);
         }
-
-        void Start() {
-            SetState(GameState.ClickPen);
-        }
+    
+      
 
         public void SetState(GameState s) {
             State = s;

@@ -34,9 +34,9 @@ namespace Clickables {
         [SerializeField] float     writeDur = 1f;
 
         /*──────── Runtime ────────*/
-        Tween        _lift, _fade, _write;
+        Tween        _lift, _fade, _write, _wobble;
         Vector3      _origPos;
-        Quaternion   _origRot;
+        Quaternion   _origRot, _hoverBaseRot, _boardFacing;
         float        _angle, _amp;
         Vector3[]    _wps;
         State        _st  = State.Idle;
@@ -47,7 +47,7 @@ namespace Clickables {
             _origPos = transform.position;
             _origRot = transform.localRotation;
             _col     = GetComponent<Collider>();
-
+            _boardFacing = Quaternion.Euler(0f, 180f, 0f);
             int c = writePathParent.childCount;
             _wps = new Vector3[c];
             for (int i = 0; i < c; ++i)
@@ -81,37 +81,52 @@ namespace Clickables {
                 }
             }
         }
-
-        void Update()
-        {
-            if (_st != State.Hovering) return;
-            _angle += wobbleSpeed * Time.deltaTime;
-            if (_angle > Mathf.PI * 2) _angle -= Mathf.PI * 2;
-
-            float y = Mathf.Sin(_angle) * wobbleY * _amp;
-            float z = Mathf.Cos(_angle) * wobbleZ * _amp;
-            transform.localRotation = _origRot * Quaternion.Euler(0, y, z);
-        }
-
+        void StartWobble()
+                    {
+                        const float TWO_PI = Mathf.PI * 2f;
+            
+                           _angle        = 0f;
+                        _hoverBaseRot = transform.localRotation;
+            
+                            // A pure DOTween “driver” – we just advance an angle forever.
+                                _wobble = DOTween.To(() => 0f, a =>
+                            {
+                                
+                                    _angle = a;
+                                float y = Mathf.Sin(_angle) * wobbleY * _amp;
+                                float z = Mathf.Cos(_angle) * wobbleZ * _amp;
+                                transform.localRotation =
+                                        _hoverBaseRot * Quaternion.Euler(0, y, z);
+                
+                               }, TWO_PI, TWO_PI / wobbleSpeed)          // 1 full cycle at the specified speed
+                       .SetEase(Ease.Linear).
+                       SetLoops(-1, LoopType.Incremental).
+                       SetLink(gameObject, LinkBehaviour.KillOnDestroy); }
+        
+        
         void StartHover()
         {
-            _st   = State.Hovering;
-            _amp  = _angle = 0;
-            Kill();
+            _st  = State.Hovering;
+            _amp = 0f;               
+            _angle = 0f;             
+            Kill();                  
 
-         
-            if (clickClip) sfxSrc.PlayOneShot(clickClip);
+            if (clickClip)          
+                sfxSrc.PlayOneShot(clickClip);
 
-           
-            _col.Lock(liftDur);
+            _col.Lock(liftDur);      
 
             _lift = transform.DOMoveY(_origPos.y + liftHeight, liftDur)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
+                    StartWobble();   
+            
+                  
                     _fade = DOTween.To(() => _amp, v => _amp = v, 1f, fadeIn)
                         .SetEase(Ease.InOutQuad);
-                    EventBus.Publish(CachedPenEvent);
+
+                    EventBus.Publish(CachedPenEvent);   
                 });
         }
 
@@ -121,7 +136,7 @@ namespace Clickables {
             Kill();
             
             if (scribbleClip) sfxSrc.PlayOneShot(scribbleClip);
-
+            transform.rotation = _boardFacing;
             _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom)
                 .SetLookAt(.05f)
                 .SetEase(Ease.InOutQuad)
@@ -146,6 +161,8 @@ namespace Clickables {
 
         void ReturnHome()
         {
+            if (clickClip)          
+                sfxSrc.PlayOneShot(clickClip);
             _st = State.Idle;
             Kill();
             DOTween.Sequence()
@@ -153,6 +170,11 @@ namespace Clickables {
                 .Join(transform.DORotateQuaternion(_origRot, liftDur).SetEase(Ease.InOutQuad));
         }
 
-        void Kill() { _lift?.Kill(); _fade?.Kill(); _write?.Kill(); }
+        void Kill() {
+            _lift?.Kill();
+            _fade?.Kill();
+            _write?.Kill();
+            _wobble?.Kill();    
+        }
     }
 }

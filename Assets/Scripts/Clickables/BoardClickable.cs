@@ -24,7 +24,6 @@ namespace Clickables {
             
             _reveal?.Reveal("hello world!");
             pen.TriggerWrite();
-            EventBus.Publish(new BoardDrawnEvent());
         }
     }
 }
