@@ -15,16 +15,13 @@ namespace Clickables {
         static readonly PenClickedEvent     CachedPenEvent   = new();
         static readonly BoardDrawnEvent     CachedBoardEvent = new();
         static readonly HoverCancelledEvent CachedHoverEvent = new();
-
-        [Header("VFX")]
-        [SerializeField] ParticleSystem chalkDustPrefab;
-        [SerializeField] Transform       dustSpawnOffset;
+        
 
         [Header("Audio")]
         [SerializeField] AudioSource sfxSrc;      
         [SerializeField] AudioClip   clickClip;    
         [SerializeField] AudioClip   scribbleClip; 
-
+        
         [Header("Hover")]
         [SerializeField] float liftHeight = .5f, liftDur = .5f;
         [SerializeField] float wobbleY = 15f, wobbleZ = 10f, wobbleSpeed = 1f, fadeIn = .3f;
@@ -40,8 +37,7 @@ namespace Clickables {
         float        _angle, _amp;
         Vector3[]    _wps;
         State        _st  = State.Idle;
-        Collider     _col;    
-
+        Collider     _col;
         void Awake()
         {
             _origPos = transform.position;
@@ -57,8 +53,8 @@ namespace Clickables {
         }
 
         public override bool CanClickNow(GameState gs)
-            => (gs == GameState.ClickPen) ||
-               (gs == GameState.DrawBoard && _st == State.Hovering);
+            => (gs == GameState.ClickPen   && _st == State.Idle)   || 
+               (gs == GameState.DrawBoard && _st == State.Hovering);   
         
         protected override void OnValidClick()
         {
@@ -83,12 +79,12 @@ namespace Clickables {
         }
         void StartWobble()
                     {
-                        const float TWO_PI = Mathf.PI * 2f;
+                        const float twoPI = Mathf.PI * 2f;
             
                            _angle        = 0f;
                         _hoverBaseRot = transform.localRotation;
             
-                            // A pure DOTween “driver” – we just advance an angle forever.
+                          
                                 _wobble = DOTween.To(() => 0f, a =>
                             {
                                 
@@ -98,7 +94,7 @@ namespace Clickables {
                                 transform.localRotation =
                                         _hoverBaseRot * Quaternion.Euler(0, y, z);
                 
-                               }, TWO_PI, TWO_PI / wobbleSpeed)          // 1 full cycle at the specified speed
+                               }, twoPI, twoPI / wobbleSpeed)       
                        .SetEase(Ease.Linear).
                        SetLoops(-1, LoopType.Incremental).
                        SetLink(gameObject, LinkBehaviour.KillOnDestroy); }
@@ -137,6 +133,7 @@ namespace Clickables {
             
             if (scribbleClip) sfxSrc.PlayOneShot(scribbleClip);
             transform.rotation = _boardFacing;
+            
             _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom)
                 .SetLookAt(.05f)
                 .SetEase(Ease.InOutQuad)

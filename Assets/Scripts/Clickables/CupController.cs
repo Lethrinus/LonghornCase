@@ -1,4 +1,5 @@
 using System;
+using System.IO.IsolatedStorage;
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -13,10 +14,7 @@ namespace Clickables {
             Idle, Hovering, AtDispenser, Delivered, Floating, AtPlant, Thrown
         }
 
-        [Header("Water Particles")]
-        [SerializeField] Transform    fillOrigin;
-        [SerializeField] Transform    pourOrigin;
-
+      
         [Header("Audio")]
         [SerializeField] AudioClip clickClip;
         [SerializeField] float     clickVolume = 1f;
@@ -47,6 +45,10 @@ namespace Clickables {
         State        _st = State.Idle;
         ParticleSystem _activeStream;
 
+        public static event Action OnCupDisposed;
+
+        public Color OrigCol => _origCol;
+
         public State CurrentState => _st;
 
         void Awake() {
@@ -62,10 +64,10 @@ namespace Clickables {
         }
 
         public override bool CanClickNow(GameState gs) =>
-            (gs == GameState.ClickCup       && (_st == State.Idle || _st == State.Hovering)) ||
+            (gs == GameState.ClickCup && (_st == State.Idle || _st == State.Hovering)) ||
             (gs == GameState.ClickDispenser && _st == State.Hovering) ||
-            (gs == GameState.ClickPlant     && (_st == State.Delivered || _st == State.Floating)) ||
-            (gs == GameState.ThrowTrash     && _st == State.AtPlant);
+            (gs == GameState.ClickPlant && (_st == State.Delivered || _st == State.Floating));
+          
 
         protected override void OnValidClick() {
             if (clickClip != null)
@@ -75,13 +77,13 @@ namespace Clickables {
             switch (gs) {
                 case GameState.ClickCup:
                 case GameState.ClickDispenser:
-                    if (_st == State.Idle) { // start hovering – play click
+                    if (_st == State.Idle) { 
                         if (clickClip != null) 
                             EventBus.Publish(new SfxEvent(clickClip, clickVolume, clickPitch));
                         StartHover();
                     }
                     else if (_st == State.Hovering) {
-                        // cancel hover – **no click SFX** (DecorativeBounce will handle the thud)
+                      
                         ReturnHome();
                     }
                     break;
@@ -91,20 +93,18 @@ namespace Clickables {
                     else if (_st == State.Floating)  ReturnToDispenser();
                     break;
 
-                case GameState.ThrowTrash:
-                    if (_st == State.AtPlant) ThrowToTrash();
-                    break;
+               
             }
         }
 
         void StartHover() {
             _st = State.Hovering;
 
-            // kill any existing tweens on this transform
+            
             DOTween.Kill(transform);
             Kill();
 
-            // lift up, then bob
+         
             _liftTween = transform
                 .DOMoveY(_origPos.y + hoverHeight, hoverDur)
                 .SetEase(Ease.OutQuad)
@@ -123,16 +123,12 @@ namespace Clickables {
             DOTween.Kill(transform);
             Kill();
 
-            // move AND rotate back in one sequence
             DOTween.Sequence()
                 .Append(transform.DOMove(_origPos, hoverDur).SetEase(Ease.InOutQuad))
-                .Join(transform.DORotateQuaternion(_origRot, hoverDur).SetEase(Ease.InOutQuad))
-                .OnComplete(() => {
-                    transform.position      = _origPos;
-                    transform.localRotation = _origRot;
+                .Join(transform.DORotateQuaternion(_origRot, hoverDur).SetEase(Ease.InOutQuad));
                     EventBus.Publish(new CupHoverCancelledEvent());
-                });
-        }
+                }
+        
 
         public void MoveToDispenser() {
             _st = State.AtDispenser;
@@ -145,14 +141,7 @@ namespace Clickables {
             _st = State.Delivered;
             Kill();
 
-            _followTween = DOTween.To(
-                () => 0f,
-                _ => {
-                    if (_activeStream) {
-                        _activeStream.transform.position = fillOrigin.position;
-                        _activeStream.transform.rotation = fillOrigin.rotation;
-                    }
-                },
+            _followTween = DOTween.To(() => 0f, _ => { },
                 0f, .4f
             ).SetEase(Ease.Linear);
 
@@ -193,33 +182,34 @@ namespace Clickables {
             wps[0] = transform.position;
             Array.Copy(_pourWps, 0, wps, 1, n);
 
-            Quaternion startRot = transform.localRotation;
-            Quaternion endRot   = startRot * Quaternion.Euler(-90, 0, 0);
+            Vector3 endEuler = _origRot.eulerAngles;
+            endEuler.x = 110f;
 
-            DOTween.Sequence()
-                .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
-                .Append(transform.DOPath(wps, pourDur, PathType.CatmullRom)
-                    .SetEase(Ease.InOutQuad)
-                    .SetLookAt(0.02f))
-                .Join(transform.DORotateQuaternion(endRot, pourDur * .9f)
-                    .SetEase(Ease.InOutQuad))
-                .OnComplete(PourFinished);
+            var seq = DOTween.Sequence().SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            
+            seq.Append(
+                transform.DOPath(wps, pourDur, PathType.CatmullRom,PathMode.Ignore).SetEase(Ease.InOutQuad));
+
+            seq.Append(transform.DOLocalRotate(endEuler, .55f).SetEase(Ease.OutQuad));
+            
+            seq.OnComplete(PourFinished);
         }
+        
 
         void PourFinished() {
-            EventBus.Publish(new PlantClickedEvent());
-
-            Quaternion downRot = _origRot * Quaternion.Euler(90, 0, 0);
+            _st = State.Delivered;
             DOTween.Sequence()
                 .AppendInterval(waitAfterPour)
                 .Append(_mr.material.DOColor(_origCol, fadeBackDur)
                     .SetEase(Ease.InOutQuad))
-                .Join(transform.DORotateQuaternion(downRot, fadeBackDur)
-                    .SetEase(Ease.InOutQuad))
-                .OnComplete(StartPostPourBob);
+                .OnComplete(() => {
+                    EventBus.Publish(new PlantClickedEvent());
+                    StartPostPourBob();
+                });
         }
 
         void StartPostPourBob() {
+            
             DOTween.Sequence()
                 .Append(transform.DORotateQuaternion(_origRot, .35f)
                     .SetEase(Ease.InOutQuad))
@@ -227,19 +217,24 @@ namespace Clickables {
                     _t1 = transform.DOMoveY(transform.position.y - bobRange, bobDur)
                         .SetEase(Ease.InOutSine)
                         .SetLoops(-1, LoopType.Yoyo);
+                    
                 });
         }
 
         public void ThrowToTrash() {
+            
             _st = State.Thrown;
             Kill();
-            DOTween.Sequence()
+            
+             DOTween.Sequence()
                 .Append(transform.DOMove(trashTarget.position, moveDur)
                     .SetEase(Ease.InOutQuad))
                 .Join(transform.DOScale(Vector3.zero, moveDur)
                     .SetEase(Ease.InOutQuad))
-                .OnComplete(() => {
+                .OnComplete(() =>
+                {
                     EventBus.Publish(new TrashThrownEvent());
+                    OnCupDisposed?.Invoke();       
                     gameObject.SetActive(false);
                 });
         }
