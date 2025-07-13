@@ -12495,6 +12495,9 @@ MonoBehaviour:
   waterStreamPool: {fileID: 0}
   fillOrigin: {fileID: 361522405}
   pourOrigin: {fileID: 1549479348}
+  clickClip: {fileID: 8300000, guid: f373fb24d38bf1640a1d978d90a6c4cd, type: 3}
+  clickVolume: 1
+  clickPitch: 1
   hoverHeight: 0.3
   hoverDur: 0.4
   bobRange: 0.05

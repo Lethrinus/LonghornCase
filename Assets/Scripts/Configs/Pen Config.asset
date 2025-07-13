@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   jumpPower: 0.08
   jumpDuration: 0.35
-  jumpEase: 9
+  jumpEase: 1
   clip: {fileID: 8300000, guid: e7fec73ae13b1e84ca5c9abc62decc00, type: 3}
   volume: 1
   pitch: 1
