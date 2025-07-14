@@ -1,6 +1,6 @@
 # LonghornCase
 
-A small Unity demo where you pick up a cup, fill it with water, water a plant, then throw the cup away—powered by a clear state machine, DOTween animations, and a ScriptableObject-based event system.
+A small Unity demo where you pick up a cup, fill it with water, water a plant, then throw the cup away—powered by a clear state machine, DOTween animations and a ScriptableObject-based event system.
 
 ## Features
 
@@ -13,10 +13,10 @@ A small Unity demo where you pick up a cup, fill it with water, water a plant, t
 
 ## Requirements
 
-- Unity 2020.3 LTS or later  
+- Unity 2021.3.45f1 
 - [DOTween](http://dotween.demigiant.com/) (free version)  
-- TextMeshPro (via Package Manager)  
-- C# 8.0+ compatible IDE (Rider, Visual Studio, etc.)
+- TextMeshPro  
+
 
 ## Gameplay Video 
 https://youtu.be/fW5mIlb0pDo
