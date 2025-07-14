@@ -1,7 +1,7 @@
+using Configs;
 using UnityEngine;
 using DG.Tweening;
 using Managers;
-
 
 namespace Clickables {
     [RequireComponent(typeof(Collider))]
@@ -12,52 +12,50 @@ namespace Clickables {
 
         Sequence       _seq;
         IClickable     _clickable;
+        GameManager    _gameManager;
+        bool           _hasClickable;
 
         void Awake() {
             _clickable = GetComponent<IClickable>();
+            _hasClickable = _clickable != null;
+        }
+
+        void Start() {
+            _gameManager = GameManager.Instance;
         }
 
         void OnMouseDown() {
-           
-            if (_clickable != null && 
-                GameManager.Instance != null && 
-                _clickable.CanClickNow(GameManager.Instance.State))
-                return;
-
-           
-            if (_seq != null && _seq.IsActive())
-                return;
+        
+            if (_seq?.IsActive() == true) return;
 
             
-            if (cfg.clip) {
-                src.pitch  = cfg.pitch;
+            if (_hasClickable && _gameManager != null && 
+                _clickable.CanClickNow(_gameManager.State))
+                return;
+
+           
+            if (cfg.clip && src) {
+                src.pitch = cfg.pitch;
                 src.volume = cfg.volume;
                 src.PlayOneShot(cfg.clip);
             }
 
-         
+          
+            float jumpDur = cfg.jumpDuration;
+            float posShakeDur = jumpDur * 0.9f;
+            float rotShakeStart = jumpDur * 0.45f;
+            float rotShakeDur = jumpDur * 0.5f;
+
             _seq = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
-                .Append(transform.DOJump(
-                    transform.position,
-                    cfg.jumpPower, 1, cfg.jumpDuration
-                ).SetEase(cfg.jumpEase))
-                .Join(transform.DOShakePosition(
-                    cfg.jumpDuration * .9f,
-                    cfg.posShake,
-                    cfg.posVibrato,
-                    cfg.posRandomness,
-                    fadeOut: true
-                ).SetEase(cfg.commonEase))
-                .Insert(cfg.jumpDuration * .45f,
-                    transform.DOShakeRotation(
-                        cfg.jumpDuration * .5f,
-                        cfg.rotShake,
-                        cfg.rotVibrato,
-                        cfg.rotRandomness,
-                        fadeOut: true
-                    ).SetEase(cfg.commonEase)
-                );
+                .Append(transform.DOJump(transform.position, cfg.jumpPower, 1, jumpDur)
+                    .SetEase(cfg.jumpEase))
+                .Join(transform.DOShakePosition(posShakeDur, cfg.posShake, 
+                    cfg.posVibrato, cfg.posRandomness, fadeOut: true)
+                    .SetEase(cfg.commonEase))
+                .Insert(rotShakeStart, transform.DOShakeRotation(rotShakeDur, 
+                    cfg.rotShake, cfg.rotVibrato, cfg.rotRandomness, fadeOut: true)
+                    .SetEase(cfg.commonEase));
         }
     }
 }

@@ -32,13 +32,16 @@ public class AudioPool : MonoBehaviour
 
     void HandleSfx(SfxEvent e)
     {
-        if (e.Clip == null) return;       
+        if (e.Clip == null) return;
+    
         var src = pool[nextIdx];
         nextIdx = (nextIdx + 1) % pool.Count;
-        src.Stop();    
-        src.clip   = e.Clip;   
-        src.pitch  = e.Pitch;          
+        
+        if (src.isPlaying) src.Stop();
+        
+        src.clip = e.Clip;
+        src.pitch = e.Pitch;
         src.volume = e.Volume;
-        src.Play();         
+        src.Play();
     }
 }

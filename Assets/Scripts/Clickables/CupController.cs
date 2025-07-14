@@ -239,12 +239,14 @@ namespace Clickables {
                 });
         }
 
-        void Kill() {
-            _t0?.Kill();
-            _t1?.Kill();
-            _liftTween?.Kill();
-            _bobTween?.Kill();
-            _followTween?.Kill();
+        void Kill() 
+        {
+            var tweens = new[] { _t0, _t1, _liftTween, _bobTween, _followTween };
+            for (int i = 0; i < tweens.Length; i++)
+            {
+                tweens[i]?.Kill();
+            }
+            _t0 = _t1 = _liftTween = _bobTween = _followTween = null;
         }
     }
 }

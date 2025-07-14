@@ -42,14 +42,12 @@ namespace Clickables {
         {
             _origPos = transform.position;
             _origRot = transform.localRotation;
-            _col     = GetComponent<Collider>();
+            _col = GetComponent<Collider>();
             _boardFacing = Quaternion.Euler(0f, 180f, 0f);
-            int c = writePathParent.childCount;
-            _wps = new Vector3[c];
-            for (int i = 0; i < c; ++i)
-                _wps[i] = writePathParent.GetChild(i).position;
-
-            writePathParent = null;         
+    
+           
+            CacheWaypoints();
+            writePathParent = null;
         }
 
         public override bool CanClickNow(GameState gs)
@@ -166,7 +164,13 @@ namespace Clickables {
                 .Append(transform.DOMove(_origPos, liftDur).SetEase(Ease.InOutQuad))
                 .Join(transform.DORotateQuaternion(_origRot, liftDur).SetEase(Ease.InOutQuad));
         }
-
+        void CacheWaypoints()
+        {
+            int c = writePathParent.childCount;
+            _wps = new Vector3[c];
+            for (int i = 0; i < c; ++i)
+                _wps[i] = writePathParent.GetChild(i).position;
+        }
         void Kill() {
             _lift?.Kill();
             _fade?.Kill();
