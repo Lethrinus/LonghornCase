@@ -6,7 +6,7 @@ using Managers;
 namespace Clickables {
     [DisallowMultipleComponent]
     public class TrashClickable : ClickableBase {
-        [SerializeField] CupController cup;
+        [SerializeField] private CupController cup;
 
         public override bool CanClickNow(GameState gs)
             => gs == GameState.ThrowTrash;

@@ -10,7 +10,7 @@ namespace Clickables
         [SerializeField] private float        revealDuration = 3f;
         [SerializeField] private Ease         revealEase     = Ease.Linear;
 
-        void Awake()
+        private void Awake()
         {
             var c = text.color;
             text.color = new Color(c.r, c.g, c.b, 0f);

@@ -10,21 +10,21 @@ namespace Clickables {
         [SerializeField] BounceConfig cfg;
         [SerializeField] AudioSource  src;
 
-        Sequence       _seq;
-        IClickable     _clickable;
-        GameManager    _gameManager;
-        bool           _hasClickable;
+        private Sequence       _seq;
+        private IClickable     _clickable;
+        private GameManager    _gameManager;
+        private  bool           _hasClickable;
 
-        void Awake() {
+        private  void Awake() {
             _clickable = GetComponent<IClickable>();
             _hasClickable = _clickable != null;
         }
 
-        void Start() {
+        private  void Start() {
             _gameManager = GameManager.Instance;
         }
 
-        void OnMouseDown() {
+        private void OnMouseDown() {
         
             if (_seq?.IsActive() == true) return;
 
@@ -41,10 +41,10 @@ namespace Clickables {
             }
 
           
-            float jumpDur = cfg.jumpDuration;
-            float posShakeDur = jumpDur * 0.9f;
-            float rotShakeStart = jumpDur * 0.45f;
-            float rotShakeDur = jumpDur * 0.5f;
+            var jumpDur = cfg.jumpDuration;
+            var posShakeDur = jumpDur * 0.9f;
+            var rotShakeStart = jumpDur * 0.45f;
+            var rotShakeDur = jumpDur * 0.5f;
 
             _seq = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)

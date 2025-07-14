@@ -11,12 +11,12 @@ namespace Particles
         [SerializeField] private float surfaceOffset = 0.02f;
         [SerializeField] private float cameraExtraPush = 2f;
 
-        readonly RaycastHit[] hits = new RaycastHit[1];
+        private readonly RaycastHit[] _hits = new RaycastHit[1];
         private Camera _cam;
         private float _lastClickTime;
-        private const float MIN_CLICK_INTERVAL = 0.05f;
+        private const float MinClickInterval= 0.05f;
 
-        void Awake()
+        private void Awake()
         {
             if (fxPool == null)
                 fxPool = FindObjectOfType<CartoonClickFxPool>(includeInactive: true);
@@ -27,13 +27,13 @@ namespace Particles
             _cam = Camera.main;
         }
 
-        void Update()
+        private void Update()
         {
             if (!Input.GetMouseButtonDown(0)) return;
 
 
-            float currentTime = Time.time;
-            if (currentTime - _lastClickTime < MIN_CLICK_INTERVAL) return;
+            var currentTime = Time.time;
+            if (currentTime - _lastClickTime < MinClickInterval) return;
             _lastClickTime = currentTime;
 
             if (!_cam || fxPool == null) return;
@@ -41,20 +41,20 @@ namespace Particles
             PerformRaycast();
         }
 
-        void PerformRaycast()
+        private void PerformRaycast()
         {
 
-            bool overUI = EventSystem.current?.IsPointerOverGameObject(-1) ?? false;
+            var overUI = EventSystem.current?.IsPointerOverGameObject(-1) ?? false;
             if (overUI) return;
 
-            Ray ray = _cam.ScreenPointToRay(Input.mousePosition);
-            int hitCount = Physics.RaycastNonAlloc(ray, hits, maxDistance, clickableMask);
+            var ray = _cam.ScreenPointToRay(Input.mousePosition);
+            var hitCount = Physics.RaycastNonAlloc(ray, _hits, maxDistance, clickableMask);
 
             if (hitCount == 0) return;
 
-            Vector3 viewDir = -ray.direction;
-            Vector3 pos = hits[0].point + viewDir * (surfaceOffset + cameraExtraPush);
-            Quaternion faceCamera = Quaternion.LookRotation(viewDir);
+            var viewDir = -ray.direction;
+            var pos = _hits[0].point + viewDir * (surfaceOffset + cameraExtraPush);
+            var faceCamera = Quaternion.LookRotation(viewDir);
             fxPool.Play(pos, faceCamera);
         }
     }

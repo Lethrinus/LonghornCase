@@ -35,21 +35,14 @@ namespace Managers
             }
         }
 
-        /// <summary>
-        /// Asıl state geçişini yapan private method
-        /// </summary>
-        void SetState(GameState newState)
+        
+         public void SetState(GameState newState)
         {
             if (_state == newState) return;
             _state = newState;
-            // İsterseniz burada StateChanged event’i de Raise edebilirsiniz
+          
         }
-
-        //────────────────────────────────────────
-        // Inspector’dan seçilebilecek PUBLIC wrapper metodlar:
-        // (Hepsi void, parametresiz, public olmalı ki UnityEvent menüsünde gözüksün)
-        //────────────────────────────────────────
-
+        
         public void GotoClickPen()        => SetState(GameState.ClickPen);
         public void GotoDrawBoard()       => SetState(GameState.DrawBoard);
         public void GotoClickCup()        => SetState(GameState.ClickCup);

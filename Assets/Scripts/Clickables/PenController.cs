@@ -9,40 +9,35 @@ namespace Clickables {
     [RequireComponent(typeof(Collider))]
     public class PenController : ClickableBase
     {
-        enum State { Idle, Hovering, Writing }
+        private enum State { Idle, Hovering, Writing }
 
         [SerializeField] GameEvent penClickedEvent;
         [SerializeField] GameEvent boardDrawnEvent;
         [SerializeField] GameEvent hoverCancelledEvent;
         
-        
-        static readonly PenClickedEvent     CachedPenEvent   = new();
-        static readonly BoardDrawnEvent     CachedBoardEvent = new();
-        static readonly HoverCancelledEvent CachedHoverEvent = new();
-        
 
         [Header("Audio")]
-        [SerializeField] AudioSource sfxSrc;      
-        [SerializeField] AudioClip   clickClip;    
-        [SerializeField] AudioClip   scribbleClip; 
+        [SerializeField] private AudioSource sfxSrc;      
+        [SerializeField] private AudioClip   clickClip;    
+        [SerializeField] private AudioClip   scribbleClip; 
         
         [Header("Hover")]
-        [SerializeField] float liftHeight = .5f, liftDur = .5f;
-        [SerializeField] float wobbleY = 15f, wobbleZ = 10f, wobbleSpeed = 1f, fadeIn = .3f;
+        [SerializeField] private float liftHeight = .5f, liftDur = .5f;
+        [SerializeField] private float wobbleY = 15f, wobbleZ = 10f, wobbleSpeed = 1f, fadeIn = .3f;
 
         [Header("Write Path")]
-        [SerializeField] Transform writePathParent;
-        [SerializeField] float     writeDur = 1f;
+        [SerializeField]private Transform writePathParent;
+        [SerializeField]private float     writeDur = 1f;
 
         /*──────── Runtime ────────*/
-        Tween        _lift, _fade, _write, _wobble;
-        Vector3      _origPos;
-        Quaternion   _origRot, _hoverBaseRot, _boardFacing;
-        float        _angle, _amp;
-        Vector3[]    _wps;
-        State        _st  = State.Idle;
-        Collider     _col;
-        void Awake()
+        private Tween        _lift, _fade, _write, _wobble;
+        private Vector3      _origPos;
+        private  Quaternion   _origRot, _hoverBaseRot, _boardFacing;
+        private  float        _angle, _amp;
+        private  Vector3[]    _wps;
+        private State        _st  = State.Idle;
+        private Collider     _col;
+         private void Awake()
         {
             _origPos = transform.position;
             _origRot = transform.localRotation;
@@ -151,7 +146,7 @@ namespace Clickables {
         void OnWriteWaypointChanged(int idx)
         {
             if (idx == 5)
-                EventBus.Publish(new SfxEvent(scribbleClip, 1f));
+                EventBus.Publish(new SfxEvent(scribbleClip));
         }
 
         void OnWriteComplete()

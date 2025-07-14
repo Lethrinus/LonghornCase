@@ -1,34 +1,54 @@
-using Clickables;
 using DG.Tweening;
 using UnityEngine;
 
-
-public class DoorController : MonoBehaviour
+namespace Clickables
 {
-    [SerializeField] Transform     door;
-    [SerializeField] float         openY  = 80f;
-    [SerializeField] float         openDur = .6f;
-
-    [SerializeField] BlinkingDot   dotPrefab;   
-    [SerializeField] Transform     dotAnchor;   
-
-    BlinkingDot _dot;                          
-
-    void Awake() => CupController.OnCupDisposed += HandleCupDisposed;
-    void OnDestroy() => CupController.OnCupDisposed -= HandleCupDisposed;
-
-    void HandleCupDisposed()
+    public class DoorController : MonoBehaviour
     {
-        
-        door.DORotate(new Vector3(0, openY, 0), openDur, RotateMode.LocalAxisAdd)
-            .SetEase(Ease.OutCubic);
+        [SerializeField] private Transform     door;
+        [SerializeField] private float         openY   = 80f;
+        [SerializeField] private  float         openDur = .6f;
 
-        
-        if (_dot == null)
-            _dot = Instantiate(dotPrefab, dotAnchor.position, dotAnchor.rotation);
-        else
-            _dot.transform.SetPositionAndRotation(dotAnchor.position, dotAnchor.rotation);
+        [SerializeField] private  BlinkingDot   dotPrefab;   
+        [SerializeField] private Transform     dotAnchor;   
 
-        _dot.gameObject.SetActive(true);   
+        private  BlinkingDot _dot;  
+
+        private  void Awake() => CupController.OnCupDisposed += HandleCupDisposed;
+        private  void OnDestroy() => CupController.OnCupDisposed -= HandleCupDisposed;
+
+        private void HandleCupDisposed()
+        {
+        
+            door
+                .DORotate(new Vector3(0, openY, 0), openDur, RotateMode.LocalAxisAdd)
+                .SetEase(Ease.OutCubic)
+                .OnComplete(SpawnDot);
+        }
+
+        private  void SpawnDot()
+        {
+        
+            if (_dot == null)
+            {
+                _dot = Instantiate(
+                    dotPrefab,
+                    dotAnchor.position,
+                    dotAnchor.rotation,
+                    parent: null      
+                );
+            }
+            else
+            {
+           
+                _dot.transform.SetParent(null, worldPositionStays: true);
+                _dot.transform.SetPositionAndRotation(
+                    dotAnchor.position,
+                    dotAnchor.rotation
+                );
+            }
+
+            _dot.gameObject.SetActive(true);
+        }
     }
 }

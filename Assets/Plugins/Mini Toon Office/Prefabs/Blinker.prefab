@@ -112,5 +112,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scaleMin: {x: 0.05, y: 0.05, z: 0.05}
   scaleMax: {x: 0.1, y: 0.1, z: 0.1}
-  period: 0.75
+  period: 0.3
   ease: 1

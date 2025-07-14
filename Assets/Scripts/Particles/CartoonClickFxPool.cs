@@ -14,7 +14,7 @@ namespace Particles
         }
 
         [Header("Prefabs & Pre-warm")]
-        [Tooltip("Eklediğiniz her prefab rastgele seçilebilir.")]
+        [Tooltip("Random Prefab")]
         public PrefabEntry[] prefabs;
 
         [Header("Random Scale (uniform)")]
@@ -23,22 +23,22 @@ namespace Particles
 
         class Pool
         {
-            readonly Queue<ParticleSystem> q = new();
-            readonly ParticleSystem prefab;
-            readonly Transform parent;
+            private readonly Queue<ParticleSystem> _q = new();
+            private readonly ParticleSystem _prefab;
+            private readonly Transform _parent;
 
             public Pool(ParticleSystem prefab, int warm, Transform parent)
             {
-                this.prefab = prefab;
-                this.parent = parent;
+                this._prefab = prefab;
+                this._parent = parent;
 
                 for (int i = 0; i < warm; ++i)
-                    q.Enqueue(Create());
+                    _q.Enqueue(Create());
             }
 
-            ParticleSystem Create()
+            private ParticleSystem Create()
             {
-                var ps = Object.Instantiate(prefab, parent);
+                var ps = Object.Instantiate(_prefab, _parent);
                 var main = ps.main;
                 main.playOnAwake = false;
                 main.stopAction = ParticleSystemStopAction.Callback;
@@ -49,46 +49,47 @@ namespace Particles
                 return ps;
             }
 
-            public ParticleSystem Pop() => q.Count > 0 ? q.Dequeue() : Create();
-            public void Push(ParticleSystem ps) => q.Enqueue(ps);
+            public ParticleSystem Pop() => _q.Count > 0 ? _q.Dequeue() : Create();
+            private void Push(ParticleSystem ps) => _q.Enqueue(ps);
 
-            sealed class ReturnHook : MonoBehaviour
+            private sealed class ReturnHook : MonoBehaviour
             {
-                Pool pool;
-                public void Configure(Pool p) => pool = p;
-                void OnParticleSystemStopped()
+                private Pool _pool;
+                public void Configure(Pool p) => _pool = p;
+
+                private void OnParticleSystemStopped()
                 {
                     var ps = GetComponent<ParticleSystem>();
                     ps.gameObject.SetActive(false);
-                    pool.Push(ps);
+                    _pool.Push(ps);
                 }
             }
         }
 
-        readonly List<Pool> pools = new();
-        readonly System.Random rng = new();
+        private readonly List<Pool> _pools = new();
+        private readonly System.Random _rng = new();
 
-        void Awake()
+        private void Awake()
         {
             foreach (var e in prefabs)
                 if (e.prefab != null)
-                    pools.Add(new Pool(e.prefab, e.prewarmCount, transform));
+                    _pools.Add(new Pool(e.prefab, e.prewarmCount, transform));
         }
 
         public void Play(Vector3 pos, Quaternion baseRot)
         {
-            if (pools.Count == 0) return;
+            if (_pools.Count == 0) return;
 
-            var pool = pools.Count == 1 ? pools[0] : pools[rng.Next(pools.Count)];
+            var pool = _pools.Count == 1 ? _pools[0] : _pools[_rng.Next(_pools.Count)];
             var ps = pool.Pop();
             ps.Clear(true);
 
             ps.transform.SetPositionAndRotation(pos, baseRot);
 
-            // Scale optimize edildi
+            
             if (minScale != maxScale)
             {
-                float s = Random.Range(minScale, maxScale);
+                var s = Random.Range(minScale, maxScale);
                 ps.transform.localScale = Vector3.one * s;
             }
 

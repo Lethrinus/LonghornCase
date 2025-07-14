@@ -17,7 +17,7 @@ namespace Clickables
             _gameManager = GameManager.Instance;
         }
     
-        void OnMouseDown()
+        private void OnMouseDown()
         {
             if (_gameManager == null) return;
             if (CanClickNow(_gameManager.State))

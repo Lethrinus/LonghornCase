@@ -1,146 +1,153 @@
+using Managers;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using Managers;  
+using UnityEngine.UI;
 
-public class UIManager : MonoBehaviour
+namespace UI
 {
-    [Header("Panels")]
-    [SerializeField] GameObject mainMenuPanel;
-    [SerializeField] GameObject pauseMenuPanel;
-    [SerializeField] GameObject levelCompletedPanel;
-
-    [Header("Main Menu Buttons")]
-    [SerializeField] Button playButton;
-    [SerializeField] Button mainMuteButton;
-    [SerializeField] Button mainExitButton;
-
-    [Header("Pause Menu Buttons")]
-    [SerializeField] Button resumeButton;
-    [SerializeField] Button pauseMuteButton;
-    [SerializeField] Button pauseExitButton;
-
-    [Header("Level Completed Buttons")]
-    [SerializeField] Button replayButton;
-    [SerializeField] Button levelMainMenuButton;
-
-    [Header("Sound Icons")]
-    [SerializeField] Sprite soundOnIcon;
-    [SerializeField] Sprite soundOffIcon;
-
-    bool isMuted = false;
-    Image mainMuteImage, pauseMuteImage;
-
-    void Start()
+    public class UIManager : MonoBehaviour
     {
+        [Header("Panels")]
+        [SerializeField] private GameObject mainMenuPanel;
+        [SerializeField] private GameObject pauseMenuPanel;
+        [SerializeField] private GameObject levelCompletedPanel;
+
+        [Header("Main Menu Buttons")]
+        [SerializeField] private Button playButton;
+        [SerializeField] private Button mainMuteButton;
+        [SerializeField] private Button mainExitButton;
+
+        [Header("Pause Menu Buttons")]
+        [SerializeField] private Button resumeButton;
+        [SerializeField] private Button pauseMuteButton;
+        [SerializeField] private Button pauseExitButton;
+
+        [Header("Level Completed Buttons")]
+        [SerializeField] private Button replayButton;
+        [SerializeField] private Button levelMainMenuButton;
+
+        [Header("Sound Icons")]
+        [SerializeField] private Sprite soundOnIcon;
+        [SerializeField] private Sprite soundOffIcon;
+
+        private bool _isMuted;
+        private Image _mainMuteImage, _pauseMuteImage;
+
+        private void Start()
+        {
       
-        mainMenuPanel.SetActive(true);
-        pauseMenuPanel.SetActive(false);
-        levelCompletedPanel.SetActive(false);
-        Time.timeScale = 0f;
+            mainMenuPanel.SetActive(true);
+            pauseMenuPanel.SetActive(false);
+            levelCompletedPanel.SetActive(false);
+            Time.timeScale = 0f;
 
      
-        playButton.onClick.AddListener(OnPlay);
-        mainMuteButton.onClick.AddListener(OnMuteToggle);
-        mainExitButton.onClick.AddListener(OnExit);
+            playButton.onClick.AddListener(OnPlay);
+            mainMuteButton.onClick.AddListener(OnMuteToggle);
+            mainExitButton.onClick.AddListener(OnExit);
 
-        resumeButton.onClick.AddListener(OnResume);
-        pauseMuteButton.onClick.AddListener(OnMuteToggle);
-        pauseExitButton.onClick.AddListener(OnExit);
+            resumeButton.onClick.AddListener(OnResume);
+            pauseMuteButton.onClick.AddListener(OnMuteToggle);
+            pauseExitButton.onClick.AddListener(OnExit);
 
-        replayButton.onClick.AddListener(OnReplay);
-        levelMainMenuButton.onClick.AddListener(OnLevelMainMenu);
+            replayButton.onClick.AddListener(OnReplay);
+            levelMainMenuButton.onClick.AddListener(OnLevelMainMenu);
 
         
-        mainMuteImage  = mainMuteButton.GetComponent<Image>();
-        pauseMuteImage = pauseMuteButton.GetComponent<Image>();
-        UpdateMuteIcons();
-    }
-
-    void Update()
-    {
-        
-        if (!mainMenuPanel.activeSelf
-            && !levelCompletedPanel.activeSelf
-            && Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (pauseMenuPanel.activeSelf) OnResume();
-            else ShowPauseMenu();
+            _mainMuteImage  = mainMuteButton.GetComponent<Image>();
+            _pauseMuteImage = pauseMuteButton.GetComponent<Image>();
+            UpdateMuteIcons();
         }
 
-        
-        if (!mainMenuPanel.activeSelf
-            && !pauseMenuPanel.activeSelf
-            && !levelCompletedPanel.activeSelf
-            && GameManager.Instance.State == GameState.Completed)
+        private void Update()
         {
-            ShowLevelCompletedMenu();
+        
+            if (!mainMenuPanel.activeSelf
+                && !levelCompletedPanel.activeSelf
+                && Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (pauseMenuPanel.activeSelf) OnResume();
+                else ShowPauseMenu();
+            }
+
+        
+            if (!mainMenuPanel.activeSelf
+                && !pauseMenuPanel.activeSelf
+                && !levelCompletedPanel.activeSelf
+                && GameManager.Instance.State == GameState.Completed)
+            {
+                ShowLevelCompletedMenu();
+            }
         }
-    }
 
-  
 
-    void OnPlay()
-    {
-        mainMenuPanel.SetActive(false);
-        Time.timeScale = 1f;
-    }
+        private void OnPlay()
+        {
+            mainMenuPanel.SetActive(false);
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+        }
 
-    void OnResume()
-    {
-        pauseMenuPanel.SetActive(false);
-        Time.timeScale = 1f;
-    }
+        private void OnResume()
+        {
+            pauseMenuPanel.SetActive(false);
+            Time.timeScale = 1f;
+            
+            AudioListener.pause = false;
+        }
 
-    void ShowPauseMenu()
-    {
-        pauseMenuPanel.SetActive(true);
-        Time.timeScale = 0f;
-    }
+        private void ShowPauseMenu()
+        {
+            pauseMenuPanel.SetActive(true);
+            Time.timeScale = 0f;
+            AudioListener.pause = true;
+        }
 
-    void OnMuteToggle()
-    {
-        isMuted = !isMuted;
-        AudioListener.pause = isMuted;
-        UpdateMuteIcons();
-    }
+        private void OnMuteToggle()
+        {
+            _isMuted = !_isMuted;
+            AudioListener.pause = _isMuted;
+            UpdateMuteIcons();
+        }
 
-    void UpdateMuteIcons()
-    {
-        mainMuteImage.sprite  = isMuted ? soundOffIcon : soundOnIcon;
-        pauseMuteImage.sprite = isMuted ? soundOffIcon : soundOnIcon;
-    }
+        private void UpdateMuteIcons()
+        {
+            _mainMuteImage.sprite  = _isMuted ? soundOffIcon : soundOnIcon;
+            _pauseMuteImage.sprite = _isMuted ? soundOffIcon : soundOnIcon;
+        }
 
-    void OnExit()
-    {
-    #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-    #else
+        private void OnExit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
         Application.Quit();
-    #endif
-    }
+#endif
+        }
 
-    void OnReplay()
-    {
-        
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
+        private static void OnReplay()
+        {
+            AudioListener.pause = false;
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
 
-    void OnLevelMainMenu()
-    {
+        private void OnLevelMainMenu()
+        {
        
-        levelCompletedPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
-        
-        GameManager.Instance.GotoClickPen();
-    }
+            levelCompletedPanel.SetActive(false);
+            mainMenuPanel.SetActive(true);
+            AudioListener.pause = false;
+            GameManager.Instance.GotoClickPen();
+        }
 
-    
 
-    void ShowLevelCompletedMenu()
-    {
-        levelCompletedPanel.SetActive(true);
-        Time.timeScale = 0f;
+        private void ShowLevelCompletedMenu()
+        {
+            levelCompletedPanel.SetActive(true);
+            Time.timeScale = 0f;
+
+            AudioListener.pause = true;
+        }
     }
 }

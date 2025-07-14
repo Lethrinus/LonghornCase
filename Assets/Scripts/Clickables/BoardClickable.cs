@@ -6,13 +6,12 @@ namespace Clickables {
     [RequireComponent(typeof(MeshRenderer))]
     public class BoardClickable : ClickableBase
     {
-        [SerializeField] PenController pen;
-        TextRevealController _reveal;
-        MeshRenderer _renderer;
+        [SerializeField] private PenController pen;
+        private TextRevealController _reveal;
+        
 
-        void Awake()
+        private void Awake()
         {
-            _renderer = GetComponent<MeshRenderer>();
             _reveal   = GetComponentInChildren<TextRevealController>();
         }
 

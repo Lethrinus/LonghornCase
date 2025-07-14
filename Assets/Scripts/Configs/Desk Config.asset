@@ -15,9 +15,9 @@ MonoBehaviour:
   jumpPower: 0.08
   jumpDuration: 0.35
   jumpEase: 9
-  clip: {fileID: 0}
-  volume: 0.6
-  pitch: 1
+  clip: {fileID: 8300000, guid: 8d73b3ed7561a7d4d9ab1836c2e3d502, type: 3}
+  volume: 0.249
+  pitch: 0.6
   posShake: {x: 0.01, y: 0.01, z: 0.01}
   posVibrato: 10
   posRandomness: 60

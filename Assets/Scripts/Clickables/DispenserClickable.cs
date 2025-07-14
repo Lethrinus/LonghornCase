@@ -7,7 +7,7 @@ namespace Clickables {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
     public class DispenserClickable : ClickableBase {
-        [SerializeField] CupController cup;
+        [SerializeField] private CupController cup;
 
         public override bool CanClickNow(GameState gs) =>
             gs == GameState.ClickDispenser &&

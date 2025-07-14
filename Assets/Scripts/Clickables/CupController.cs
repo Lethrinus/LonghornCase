@@ -1,5 +1,4 @@
 using System;
-using System.IO.IsolatedStorage;
 using UnityEngine;
 using DG.Tweening;
 using Core;
@@ -14,64 +13,61 @@ namespace Clickables {
             Idle, Hovering, AtDispenser, Delivered, Floating, AtPlant, Thrown
         }
         
-        [SerializeField] GameEvent cupClickedEvent;
-        [SerializeField] GameEvent cupHoverCancelledEvent;
-        [SerializeField] GameEvent cupFilledEvent;
-        [SerializeField] GameEvent plantClickedEvent;
-        [SerializeField] GameEvent trashThrownEvent;
+        [SerializeField] private GameEvent cupClickedEvent;
+        [SerializeField] private GameEvent cupHoverCancelledEvent;
+        [SerializeField] private GameEvent cupFilledEvent;
+        [SerializeField] private GameEvent plantClickedEvent;
+        [SerializeField] private GameEvent trashThrownEvent;
       
         [Header("Audio")]
-        [SerializeField] AudioClip clickClip;
-        [SerializeField] float     clickVolume = 1f;
-        [SerializeField] float     clickPitch  = 1f;
+        [SerializeField] private AudioClip clickClip;
+        [SerializeField] private float     clickVolume = 1f;
+        [SerializeField] private float     clickPitch  = 1f;
 
         [Header("Hover & Bob")]
-        [SerializeField] float hoverHeight = .3f, hoverDur = .4f;
-        [SerializeField] float bobRange    = .05f, bobDur   = 1f;
+        [SerializeField] private float hoverHeight = .3f, hoverDur = .4f;
+        [SerializeField] private float bobRange    = .05f, bobDur   = 1f;
 
         [Header("Move Targets")]
-        [SerializeField] Transform dispenserTarget, plantTarget, trashTarget;
-        [SerializeField] float     moveDur = 1f;
+        [SerializeField] private Transform dispenserTarget, plantTarget, trashTarget;
+        [SerializeField] private float     moveDur = 1f;
 
         [Header("Fill / Float")]
-        [SerializeField] Color filledColor    = Color.cyan;
-        [SerializeField] float floatFwd       = .15f, floatUp = .08f;
+        [SerializeField] private Color filledColor    = Color.cyan;
+        [SerializeField] private float floatFwd       = .15f, floatUp = .08f;
 
         [Header("Pour Path")]
-        [SerializeField] Transform pourPathParent;
-        [SerializeField] float     pourDur = 1f, waitAfterPour = .25f, fadeBackDur = .5f;
+        [SerializeField] private Transform pourPathParent;
+        [SerializeField] private float     pourDur = 1f, waitAfterPour = .25f, fadeBackDur = .5f;
 
-        Vector3      _origPos;
-        Quaternion   _origRot;
-        MeshRenderer _mr;
-        Color        _origCol;
-        Vector3[]    _pourWps;
-        Tween        _t0, _t1, _liftTween, _bobTween, _followTween;
-        State        _st = State.Idle;
-        ParticleSystem _activeStream;
+        private Vector3      _origPos;
+        private  Quaternion   _origRot;
+        private  MeshRenderer _mr;
+        private   Color        _origCol;
+        private   Vector3[]    _pourWps;
+        private   Tween        _t0, _t1, _liftTween, _bobTween, _followTween;
+        private  ParticleSystem _activeStream;
 
         public static event Action OnCupDisposed;
 
-        public Color OrigCol => _origCol;
+        public State CurrentState { get; private set; } = State.Idle;
 
-        public State CurrentState => _st;
-
-        void Awake() {
+        private void Awake() {
             _origPos = transform.position;
             _origRot = transform.localRotation;
             _mr      = GetComponent<MeshRenderer>();
             _origCol = _mr.material.color;
 
-            int c = pourPathParent.childCount;
+            var c = pourPathParent.childCount;
             _pourWps = new Vector3[c];
-            for (int i = 0; i < c; ++i)
+            for (var i = 0; i < c; ++i)
                 _pourWps[i] = pourPathParent.GetChild(i).position;
         }
 
         public override bool CanClickNow(GameState gs) =>
-            (gs == GameState.ClickCup && (_st == State.Idle || _st == State.Hovering)) ||
-            (gs == GameState.ClickDispenser && _st == State.Hovering) ||
-            (gs == GameState.ClickPlant && (_st == State.Delivered || _st == State.Floating));
+            (gs == GameState.ClickCup && (CurrentState == State.Idle || CurrentState == State.Hovering)) ||
+            (gs == GameState.ClickDispenser && CurrentState == State.Hovering) ||
+            (gs == GameState.ClickPlant && (CurrentState == State.Delivered || CurrentState == State.Floating));
           
 
         protected override void OnValidClick() {
@@ -82,28 +78,28 @@ namespace Clickables {
             switch (gs) {
                 case GameState.ClickCup:
                 case GameState.ClickDispenser:
-                    if (_st == State.Idle) { 
+                    if (CurrentState == State.Idle) { 
                         if (clickClip != null) 
                             EventBus.Publish(new SfxEvent(clickClip, clickVolume, clickPitch));
                         StartHover();
                     }
-                    else if (_st == State.Hovering) {
+                    else if (CurrentState == State.Hovering) {
                       
                         ReturnHome();
                     }
                     break;
 
                 case GameState.ClickPlant:
-                    if      (_st == State.Delivered) StartFloat();
-                    else if (_st == State.Floating)  ReturnToDispenser();
+                    if      (CurrentState == State.Delivered) StartFloat();
+                    else if (CurrentState == State.Floating)  ReturnToDispenser();
                     break;
 
                
             }
         }
 
-        void StartHover() {
-            _st = State.Hovering;
+        private void StartHover() {
+            CurrentState = State.Hovering;
 
             
             DOTween.Kill(transform);
@@ -122,8 +118,8 @@ namespace Clickables {
                 });
         }
 
-        void ReturnHome() {
-            _st = State.Idle;
+        private void ReturnHome() {
+            CurrentState = State.Idle;
 
             DOTween.Kill(transform);
             Kill();
@@ -136,14 +132,14 @@ namespace Clickables {
         
 
         public void MoveToDispenser() {
-            _st = State.AtDispenser;
+            CurrentState = State.AtDispenser;
             Kill();
             _t0 = transform.DOMove(dispenserTarget.position, moveDur)
                            .SetEase(Ease.InOutQuad);
         }
 
         public void FillWater() {
-            _st = State.Delivered;
+            CurrentState = State.Delivered;
             Kill();
 
             _followTween = DOTween.To(() => 0f, _ => { },
@@ -155,15 +151,15 @@ namespace Clickables {
                 .OnComplete(() =>  cupFilledEvent.Raise());
         }
 
-        void ReturnToDispenser() {
-            _st = State.Delivered;
+        private void ReturnToDispenser() {
+            CurrentState = State.Delivered;
             Kill();
             _t0 = transform.DOMove(dispenserTarget.position, hoverDur)
                            .SetEase(Ease.InOutQuad);
         }
 
-        void StartFloat() {
-            _st = State.Floating;
+        private  void StartFloat() {
+            CurrentState = State.Floating;
             Kill();
 
             Vector3 tgt = dispenserTarget.position
@@ -179,7 +175,7 @@ namespace Clickables {
         }
 
         public void StartPour() {
-            _st = State.AtPlant;
+            CurrentState = State.AtPlant;
             Kill();
 
             int  n   = _pourWps.Length;
@@ -201,8 +197,8 @@ namespace Clickables {
         }
         
 
-        void PourFinished() {
-            _st = State.Delivered;
+        private void PourFinished() {
+            CurrentState = State.Delivered;
             DOTween.Sequence()
                 .AppendInterval(waitAfterPour)
                 .Append(_mr.material.DOColor(_origCol, fadeBackDur)
@@ -213,7 +209,7 @@ namespace Clickables {
                 });
         }
 
-        void StartPostPourBob() {
+        private  void StartPostPourBob() {
             
             DOTween.Sequence()
                 .Append(transform.DORotateQuaternion(_origRot, .35f)
@@ -228,7 +224,7 @@ namespace Clickables {
 
         public void ThrowToTrash() {
             
-            _st = State.Thrown;
+            CurrentState = State.Thrown;
             Kill();
             
              DOTween.Sequence()
@@ -244,7 +240,7 @@ namespace Clickables {
                 });
         }
 
-        void Kill() 
+        private   void Kill() 
         {
             var tweens = new[] { _t0, _t1, _liftTween, _bobTween, _followTween };
             for (int i = 0; i < tweens.Length; i++)
