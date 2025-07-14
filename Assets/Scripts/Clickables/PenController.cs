@@ -11,11 +11,7 @@ namespace Clickables {
     {
         enum State { Idle, Hovering, Writing }
 
-        [SerializeField] GameEvent penClickedEvent;
-        [SerializeField] GameEvent boardDrawnEvent;
-        [SerializeField] GameEvent hoverCancelledEvent;
-        
-        
+     
         static readonly PenClickedEvent     CachedPenEvent   = new();
         static readonly BoardDrawnEvent     CachedBoardEvent = new();
         static readonly HoverCancelledEvent CachedHoverEvent = new();
@@ -58,14 +54,12 @@ namespace Clickables {
             => (gs == GameState.ClickPen   && _st == State.Idle)   || 
                (gs == GameState.DrawBoard && _st == State.Hovering);   
         
-        protected override void OnValidClick() {
+        protected override void OnValidClick()
+        {
             var gs = GameManager.Instance.State;
-         
 
-            if (gs == GameState.ClickPen) {
-                penClickedEvent.Raise();
-                
-
+            if (gs == GameState.ClickPen)
+            {
                 StartHover();
             }
             else if (gs == GameState.DrawBoard)
@@ -73,7 +67,7 @@ namespace Clickables {
                 if (_st == State.Hovering)
                 {
                     ReturnHome();
-                    hoverCancelledEvent.Raise();     
+                    EventBus.Publish(CachedHoverEvent);
                 }
                 else
                 {
@@ -120,14 +114,13 @@ namespace Clickables {
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
-                    penClickedEvent.Raise();
                     StartWobble();   
             
                   
                     _fade = DOTween.To(() => _amp, v => _amp = v, 1f, fadeIn)
                         .SetEase(Ease.InOutQuad);
 
-                    
+                    EventBus.Publish(CachedPenEvent);   
                 });
         }
 
@@ -157,7 +150,7 @@ namespace Clickables {
         void OnWriteComplete()
         {
             ReturnHome();
-            boardDrawnEvent.Raise();
+            EventBus.Publish(CachedBoardEvent);
         }
 
 

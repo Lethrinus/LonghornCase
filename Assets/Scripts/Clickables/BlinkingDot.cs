@@ -28,7 +28,7 @@ public class BlinkingDot : MonoBehaviour
     void OnMouseDown()                     
     {
         _pulse?.Kill();                      
-       // GameManager.Instance.SetState(GameState.Completed);
+        GameManager.Instance.SetState(GameState.Completed);
         gameObject.SetActive(false);    
     }
 }

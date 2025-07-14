@@ -13,12 +13,7 @@ namespace Clickables {
         public enum State {
             Idle, Hovering, AtDispenser, Delivered, Floating, AtPlant, Thrown
         }
-        
-        [SerializeField] GameEvent cupClickedEvent;
-        [SerializeField] GameEvent cupHoverCancelledEvent;
-        [SerializeField] GameEvent cupFilledEvent;
-        [SerializeField] GameEvent plantClickedEvent;
-        [SerializeField] GameEvent trashThrownEvent;
+
       
         [Header("Audio")]
         [SerializeField] AudioClip clickClip;
@@ -114,7 +109,7 @@ namespace Clickables {
                 .DOMoveY(_origPos.y + hoverHeight, hoverDur)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() => {
-                    cupClickedEvent.Raise(); 
+                    EventBus.Publish(new CupClickedEvent());
                     _bobTween = transform
                         .DOMoveY(_origPos.y + hoverHeight - bobRange, bobDur)
                         .SetEase(Ease.InOutSine)
@@ -131,7 +126,7 @@ namespace Clickables {
             DOTween.Sequence()
                 .Append(transform.DOMove(_origPos, hoverDur).SetEase(Ease.InOutQuad))
                 .Join(transform.DORotateQuaternion(_origRot, hoverDur).SetEase(Ease.InOutQuad));
-                    cupHoverCancelledEvent.Raise(); 
+                    EventBus.Publish(new CupHoverCancelledEvent());
                 }
         
 
@@ -152,7 +147,7 @@ namespace Clickables {
 
             _t0 = _mr.material.DOColor(filledColor, .4f)
                 .SetEase(Ease.InOutQuad)
-                .OnComplete(() =>  cupFilledEvent.Raise());
+                .OnComplete(() => EventBus.Publish(new CupFilledEvent()));
         }
 
         void ReturnToDispenser() {
@@ -208,7 +203,7 @@ namespace Clickables {
                 .Append(_mr.material.DOColor(_origCol, fadeBackDur)
                     .SetEase(Ease.InOutQuad))
                 .OnComplete(() => {
-                    plantClickedEvent.Raise();
+                    EventBus.Publish(new PlantClickedEvent());
                     StartPostPourBob();
                 });
         }
@@ -238,8 +233,8 @@ namespace Clickables {
                     .SetEase(Ease.InOutQuad))
                 .OnComplete(() =>
                 {
-                    trashThrownEvent.Raise();         
-                    OnCupDisposed?.Invoke();
+                    EventBus.Publish(new TrashThrownEvent());
+                    OnCupDisposed?.Invoke();       
                     gameObject.SetActive(false);
                 });
         }

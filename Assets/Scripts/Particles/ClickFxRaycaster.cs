@@ -13,8 +13,11 @@ namespace Particles
 
         readonly RaycastHit[] hits = new RaycastHit[1];
         private Camera _cam;
-        private float _lastClickTime;
-        private const float MIN_CLICK_INTERVAL = 0.05f;
+
+        private void Start()
+        {
+            _cam = Camera.main;
+        }
 
         void Awake()
         {
@@ -22,37 +25,23 @@ namespace Particles
                 fxPool = FindObjectOfType<CartoonClickFxPool>(includeInactive: true);
         }
 
-        private void Start()
-        {
-            _cam = Camera.main;
-        }
-
         void Update()
         {
             if (!Input.GetMouseButtonDown(0)) return;
-
-
-            float currentTime = Time.time;
-            if (currentTime - _lastClickTime < MIN_CLICK_INTERVAL) return;
-            _lastClickTime = currentTime;
-
-            if (!_cam || fxPool == null) return;
-
-            PerformRaycast();
-        }
-
-        void PerformRaycast()
-        {
-
-            bool overUI = EventSystem.current?.IsPointerOverGameObject(-1) ?? false;
-            if (overUI) return;
+            if (!_cam || fxPool is null) return;
 
             Ray ray = _cam.ScreenPointToRay(Input.mousePosition);
             int hitCount = Physics.RaycastNonAlloc(ray, hits, maxDistance, clickableMask);
 
-            if (hitCount == 0) return;
+            bool overUI = EventSystem.current is not null &&
+                          EventSystem.current.IsPointerOverGameObject(-1);
 
-            Vector3 viewDir = -ray.direction;
+            if (overUI && hitCount == 0) return;
+            if (hitCount == 0) return;
+        
+        
+        
+            Vector3 viewDir = -ray.direction.normalized;
             Vector3 pos = hits[0].point + viewDir * (surfaceOffset + cameraExtraPush);
             Quaternion faceCamera = Quaternion.LookRotation(viewDir);
             fxPool.Play(pos, faceCamera);
