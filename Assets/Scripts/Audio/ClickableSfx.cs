@@ -1,20 +1,21 @@
-using Core;
+using Audio;
 using UnityEngine;
+using Zenject;
 
 namespace Audio
 {
     [RequireComponent(typeof(Collider))]
-    public class ClickableSfx : MonoBehaviour {
+    public class ClickableSfx : MonoBehaviour
+    {
         [SerializeField] AudioClip clip;
-        [SerializeField] float     volume = 1f;
-        [SerializeField] float     pitch  = 1f;
+        [SerializeField] float volume = 1f, pitch = 1f;
 
-        void OnMouseDown() {
+        [Inject] SignalBus _bus;
+
+        void OnMouseDown()
+        {
             if (!enabled || clip == null) return;
-
-            EventBus.Publish(new SfxEvent(clip, volume, pitch));
+            _bus.Fire(new SfxSignal(clip, volume, pitch));
         }
     }
 }
-
-

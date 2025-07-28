@@ -3,12 +3,14 @@ using UnityEngine;
 using DG.Tweening;
 using Core;
 using Managers;
+using Zenject;
 
 namespace Clickables {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
     public class PenController : ClickableBase
     {
+        [Inject] private SignalBus _bus;
         private enum State { Idle, Hovering, Writing }
 
         [SerializeField] GameEvent penClickedEvent;
@@ -146,7 +148,7 @@ namespace Clickables {
         void OnWriteWaypointChanged(int idx)
         {
             if (idx == 5)
-                EventBus.Publish(new SfxEvent(scribbleClip));
+               _bus.Fire(new SfxSignal(scribbleClip));
         }
 
         void OnWriteComplete()

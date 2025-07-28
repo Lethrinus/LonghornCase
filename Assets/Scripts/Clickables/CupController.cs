@@ -4,11 +4,16 @@ using DG.Tweening;
 using Core;
 using Audio;
 using Managers;
+using Zenject;
 
 namespace Clickables {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
-    public class CupController : ClickableBase {
+    public class CupController : ClickableBase
+    {
+
+        [Inject] private SignalBus _bus;
+        
         public enum State {
             Idle, Hovering, AtDispenser, Delivered, Floating, AtPlant, Thrown
         }
@@ -71,8 +76,8 @@ namespace Clickables {
           
 
         protected override void OnValidClick() {
-            if (clickClip != null)
-                EventBus.Publish(new SfxEvent(clickClip, clickVolume, clickPitch));
+            if (clickClip != null) 
+                _bus.Fire(new SfxSignal(clickClip, clickVolume, clickPitch));
 
             var gs = GameManager.Instance.State;
             switch (gs) {
@@ -80,7 +85,8 @@ namespace Clickables {
                 case GameState.ClickDispenser:
                     if (CurrentState == State.Idle) { 
                         if (clickClip != null) 
-                            EventBus.Publish(new SfxEvent(clickClip, clickVolume, clickPitch));
+                            _bus.Fire(new SfxSignal(clickClip, clickVolume, clickPitch));
+
                         StartHover();
                     }
                     else if (CurrentState == State.Hovering) {

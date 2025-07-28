@@ -1,5 +1,3 @@
-// Assets/Scripts/Events/GameEventListener.cs
-
 using UnityEngine;
 using UnityEngine.Events;
 
