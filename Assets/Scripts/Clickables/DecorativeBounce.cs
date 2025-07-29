@@ -2,12 +2,15 @@ using Configs;
 using UnityEngine;
 using DG.Tweening;
 using Managers;
+using Zenject;
 
 namespace Clickables {
     [RequireComponent(typeof(Collider))]
     [DefaultExecutionOrder(-100)]
     public class DecorativeBounce : MonoBehaviour {
-        [SerializeField] BounceConfig cfg;
+        
+        
+        [SerializeField]  private BounceConfig cfg;
         [SerializeField] AudioSource  src;
 
         private Sequence       _seq;

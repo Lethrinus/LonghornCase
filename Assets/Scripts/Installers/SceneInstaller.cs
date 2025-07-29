@@ -12,7 +12,7 @@ public class SceneInstaller : MonoInstaller
         /* Signals */
         SignalBusInstaller.Install(Container);
         Container.DeclareSignal<SfxSignal>();
-
+        
         /* GameManager */
         Container.Bind<GameManager>()
             .FromComponentInHierarchy()
