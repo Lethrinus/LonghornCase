@@ -1,51 +1,60 @@
 using DG.Tweening;
+using Infrastructure.Signals;
 using UnityEngine;
+using Zenject;
 
 namespace Clickables
 {
     public class DoorController : MonoBehaviour
     {
-        [SerializeField] private Transform     door;
-        [SerializeField] private float         openY   = 80f;
-        [SerializeField] private  float         openDur = .6f;
+        [Header("Door")]
+        [SerializeField] Transform door;
+        [SerializeField] float     openY    = 35f;
+        [SerializeField] float     openDur  = .6f;
+        [SerializeField] Ease      openEase = Ease.OutCubic;
 
-        [SerializeField] private  BlinkingDot   dotPrefab;   
-        [SerializeField] private Transform     dotAnchor;   
+        [Header("Blinking Dot")]
+        [SerializeField] BlinkingDot dotPrefab;
+        [SerializeField] Transform   dotAnchor;
+        [SerializeField] float       dotDelay = .35f;
 
-        private  BlinkingDot _dot;  
+        BlinkingDot _dot;
+        bool        _doorOpened;
 
-        private  void Awake() => CupController.OnCupDisposed += HandleCupDisposed;
-        private  void OnDestroy() => CupController.OnCupDisposed -= HandleCupDisposed;
+        [Inject] SignalBus   _bus;
+        [Inject] DiContainer _container;   // 🆕
 
-        private void HandleCupDisposed()
+        /* ---------------------------------------------------------------- */
+        void OnEnable()  => _bus.Subscribe<TrashThrownSignal>(OnTrashThrown);
+        void OnDisable() => _bus.Unsubscribe<TrashThrownSignal>(OnTrashThrown);
+
+        /* ---------------------------------------------------------------- */
+        void OnTrashThrown(TrashThrownSignal _)
         {
-        
-            door
-                .DORotate(new Vector3(0, openY, 0), openDur, RotateMode.LocalAxisAdd)
-                .SetEase(Ease.OutCubic)
-                .OnComplete(SpawnDot);
+            if (_doorOpened) return;            
+            _doorOpened = true;
+
+            DOTween.Sequence()
+                   .Append(door.DORotate(new Vector3(0, openY, 0),
+                                         openDur, RotateMode.LocalAxisAdd)
+                                 .SetEase(openEase))
+                   .AppendInterval(dotDelay)
+                   .AppendCallback(ShowDot);
         }
 
-        private  void SpawnDot()
+        void ShowDot()
         {
-        
             if (_dot == null)
             {
-                _dot = Instantiate(
-                    dotPrefab,
-                    dotAnchor.position,
-                    dotAnchor.rotation,
-                    parent: null      
-                );
+               
+                var go  = _container.InstantiatePrefab(dotPrefab,
+                                  dotAnchor.position, dotAnchor.rotation, null);
+                _dot = go.GetComponent<BlinkingDot>();
             }
             else
             {
-           
-                _dot.transform.SetParent(null, worldPositionStays: true);
-                _dot.transform.SetPositionAndRotation(
-                    dotAnchor.position,
-                    dotAnchor.rotation
-                );
+                _dot.transform.SetPositionAndRotation(dotAnchor.position,
+                                                       dotAnchor.rotation);
             }
 
             _dot.gameObject.SetActive(true);

@@ -11,6 +11,7 @@ namespace Managers
         ReturnCup,
         ClickPlant,
         ThrowTrash,
+        AwaitDot,
         Completed
     }
 
@@ -50,6 +51,7 @@ namespace Managers
         public void GotoReturnCup()       => SetState(GameState.ReturnCup);
         public void GotoClickPlant()      => SetState(GameState.ClickPlant);
         public void GotoThrowTrash()      => SetState(GameState.ThrowTrash);
+        public void GotoAwaitDot()        => SetState(GameState.AwaitDot);
         public void GotoCompleted()       => SetState(GameState.Completed);
     }
 }

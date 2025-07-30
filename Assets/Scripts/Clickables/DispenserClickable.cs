@@ -1,12 +1,13 @@
-using UnityEngine;
-using Core;
-using Clickables;
+// Assets/Scripts/Clickables/DispenserClickable.cs
 using Managers;
+using UnityEngine;
 
-namespace Clickables {
+namespace Clickables
+{
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
-    public class DispenserClickable : ClickableBase {
+    public class DispenserClickable : ClickableBase
+    {
         [SerializeField] private CupController cup;
 
         public override bool CanClickNow(GameState gs) =>
@@ -14,9 +15,10 @@ namespace Clickables {
             (cup.CurrentState == CupController.State.Hovering ||
              cup.CurrentState == CupController.State.AtDispenser);
 
-        protected override void OnValidClick() {
-            if      (cup.CurrentState == CupController.State.Hovering)     cup.MoveToDispenser();
-            else if (cup.CurrentState == CupController.State.AtDispenser)  cup.FillWater();
+        protected override void OnValidClick()
+        {
+            if      (cup.CurrentState == CupController.State.Hovering)    cup.MoveToDispenser();
+            else if (cup.CurrentState == CupController.State.AtDispenser) cup.FillWater();
         }
     }
 }

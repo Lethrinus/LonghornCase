@@ -1,76 +1,83 @@
-using Audio;
-using UnityEngine;
+// Assets/Scripts/Clickables/PenController.cs
 using DG.Tweening;
-using Core;
+using Infrastructure.Signals;
 using Managers;
+using UnityEngine;
 using Zenject;
 
-namespace Clickables {
+namespace Clickables
+{
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
     public class PenController : ClickableBase
     {
-        [Inject] private SignalBus _bus;
-        private enum State { Idle, Hovering, Writing }
+        enum State { Idle, Hovering, Writing }
 
-        [SerializeField] GameEvent penClickedEvent;
-        [SerializeField] GameEvent boardDrawnEvent;
-        [SerializeField] GameEvent hoverCancelledEvent;
-        
+        /* ---------- inspector ----------------------------------------- */
+        [SerializeField] AudioSource sfxSrc;
+        [SerializeField] AudioClip   clickClip;
+        [SerializeField] AudioClip   scribbleClip;
 
-        [Header("Audio")]
-        [SerializeField] private AudioSource sfxSrc;      
-        [SerializeField] private AudioClip   clickClip;    
-        [SerializeField] private AudioClip   scribbleClip; 
-        
         [Header("Hover")]
-        [SerializeField] private float liftHeight = .5f, liftDur = .5f;
-        [SerializeField] private float wobbleY = 15f, wobbleZ = 10f, wobbleSpeed = 1f, fadeIn = .3f;
+        [SerializeField] float liftHeight  = .5f;
+        [SerializeField] float liftDur     = .5f;
+        [SerializeField] float wobbleY     = 15f;
+        [SerializeField] float wobbleZ     = 10f;
+        [SerializeField] float wobbleSpeed = 1f;
+        [SerializeField] float fadeIn      = .3f;
 
         [Header("Write Path")]
-        [SerializeField]private Transform writePathParent;
-        [SerializeField]private float     writeDur = 1f;
+        [SerializeField] Transform writePathParent;
+        [SerializeField] float     writeDur = 1f;
 
-        /*──────── Runtime ────────*/
-        private Tween        _lift, _fade, _write, _wobble;
-        private Vector3      _origPos;
-        private  Quaternion   _origRot, _hoverBaseRot, _boardFacing;
-        private  float        _angle, _amp;
-        private  Vector3[]    _wps;
-        private State        _st  = State.Idle;
-        private Collider     _col;
-         private void Awake()
+        [Header("Write Rotation")]
+        [SerializeField] float rotateDur  = .35f;
+        [SerializeField] Ease  rotateEase = Ease.OutQuad;
+
+        /* ---------- DI -------------------------------------------------- */
+        [Inject] SignalBus _bus;
+
+        /* ---------- runtime -------------------------------------------- */
+        State      _state = State.Idle;
+        Vector3    _origPos;
+        Quaternion _origLocalRot;
+        Quaternion _localBoardFacing;
+        Vector3[]  _wps;
+
+        Tween _lift, _fade, _write, _wobble, _ampTween;
+        float _amp;
+
+        /* =============================================================== */
+        void Awake()
         {
-            _origPos = transform.position;
-            _origRot = transform.localRotation;
-            _col = GetComponent<Collider>();
-            _boardFacing = Quaternion.Euler(0f, 180f, 0f);
-    
-           
+            _origPos        = transform.position;
+            _origLocalRot   = transform.localRotation;          // local!!
+            _localBoardFacing = _origLocalRot * Quaternion.Euler(0f, 180f, 0f);
+
             CacheWaypoints();
-            writePathParent = null;
         }
 
-        public override bool CanClickNow(GameState gs)
-            => (gs == GameState.ClickPen   && _st == State.Idle)   || 
-               (gs == GameState.DrawBoard && _st == State.Hovering);   
-        
-        protected override void OnValidClick() {
+        /* ---------- ClickableBase ------------------------------------- */
+        public override bool CanClickNow(GameState gs) =>
+            (gs == GameState.ClickPen   && _state == State.Idle)   ||
+            (gs == GameState.DrawBoard && _state == State.Hovering);
+
+        protected override void OnValidClick()
+        {
             var gs = GameManager.Instance.State;
-         
 
-            if (gs == GameState.ClickPen) {
-                penClickedEvent.Raise();
-                
-
+            if (gs == GameState.ClickPen)
+            {
+                if (clickClip) _bus.Fire(new PlaySfxSignal(clickClip));
+                _bus.Fire<PenClickedSignal>();
                 StartHover();
             }
             else if (gs == GameState.DrawBoard)
             {
-                if (_st == State.Hovering)
+                if (_state == State.Hovering)
                 {
                     ReturnHome();
-                    hoverCancelledEvent.Raise();     
+                    _bus.Fire<PenHoverCanceledSignal>();
                 }
                 else
                 {
@@ -78,96 +85,98 @@ namespace Clickables {
                 }
             }
         }
-        void StartWobble()
-                    {
-                        const float twoPI = Mathf.PI * 2f;
-            
-                           _angle        = 0f;
-                        _hoverBaseRot = transform.localRotation;
-            
-                          
-                                _wobble = DOTween.To(() => 0f, a =>
-                            {
-                                
-                                    _angle = a;
-                                float y = Mathf.Sin(_angle) * wobbleY * _amp;
-                                float z = Mathf.Cos(_angle) * wobbleZ * _amp;
-                                transform.localRotation =
-                                        _hoverBaseRot * Quaternion.Euler(0, y, z);
-                
-                               }, twoPI, twoPI / wobbleSpeed)       
-                       .SetEase(Ease.Linear).
-                       SetLoops(-1, LoopType.Incremental).
-                       SetLink(gameObject, LinkBehaviour.KillOnDestroy); }
-        
-        
+
+        /* ---------- Hover --------------------------------------------- */
         void StartHover()
         {
-            _st  = State.Hovering;
-            _amp = 0f;               
-            _angle = 0f;             
-            Kill();                  
+            _state = State.Hovering;
+            KillTweens();
 
-            if (clickClip)          
-                sfxSrc.PlayOneShot(clickClip);
+            _amp = 0f;                                // wobble genliği fade‑in
 
-            _col.Lock(liftDur);      
+            float startY  = transform.position.y;
+            float targetY = startY + liftHeight;
 
-            _lift = transform.DOMoveY(_origPos.y + liftHeight, liftDur)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(() =>
-                {
-                    penClickedEvent.Raise();
-                    StartWobble();   
-            
-                  
-                    _fade = DOTween.To(() => _amp, v => _amp = v, 1f, fadeIn)
-                        .SetEase(Ease.InOutQuad);
-
-                    
-                });
+            _lift = transform.DOMoveY(targetY, liftDur)
+                             .SetEase(Ease.OutQuad)
+                             .OnComplete(StartWobble);
         }
 
+        void StartWobble()
+        {
+            const float twoPi = Mathf.PI * 2f;
+            float angle = 0f;
+            Quaternion baseRot = transform.localRotation;
+
+            _wobble = DOTween.To(() => 0f, a =>
+                         {
+                             angle = a;
+                             float y = Mathf.Sin(angle) * wobbleY * _amp;
+                             float z = Mathf.Cos(angle) * wobbleZ * _amp;
+                             transform.localRotation = baseRot * Quaternion.Euler(0f, y, z);
+                         },
+                         twoPi, twoPi / wobbleSpeed)
+                        .SetEase(Ease.Linear)
+                        .SetLoops(-1, LoopType.Incremental)
+                        .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+
+            _ampTween = DOTween.To(() => _amp, v => _amp = v, 1f, fadeIn)
+                               .SetEase(Ease.InOutQuad);
+
+            sfxSrc.DOFade(1f, fadeIn);
+        }
+
+        /* ---------- Writing ------------------------------------------- */
         public void TriggerWrite()
         {
-            _st = State.Writing;
-            Kill();
-            
-            if (scribbleClip) sfxSrc.PlayOneShot(scribbleClip);
-            transform.rotation = _boardFacing;
-            
-            _write = transform.DOPath(_wps, writeDur, PathType.CatmullRom)
-                .SetLookAt(.05f)
-                .SetEase(Ease.InOutQuad)
-                .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
-                .OnWaypointChange(OnWriteWaypointChanged)
-                .OnComplete(OnWriteComplete);
-        }
+            _state = State.Writing;
+            KillTweens();
 
+            if (scribbleClip) _bus.Fire(new PlaySfxSignal(scribbleClip));
+
+            var seq = DOTween.Sequence()
+                             .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+
+            /* 1️⃣ Yumuşak local dönüş */
+            seq.Append(transform.DOLocalRotateQuaternion(_localBoardFacing, rotateDur)
+                                .SetEase(rotateEase));
+
+            /* 2️⃣ Yazma path’i (world space) */
+            seq.Append(transform.DOPath(_wps, writeDur, PathType.CatmullRom)
+                                .SetLookAt(.05f)
+                                .SetEase(Ease.InOutQuad)
+                                .OnWaypointChange(OnWriteWaypointChanged));
+
+            seq.OnComplete(OnWriteComplete);
+            _write = seq;
+        }
 
         void OnWriteWaypointChanged(int idx)
         {
-            if (idx == 5)
-               _bus.Fire(new SfxSignal(scribbleClip));
+            if (idx == 5 && scribbleClip)
+                _bus.Fire(new PlaySfxSignal(scribbleClip));
         }
 
         void OnWriteComplete()
         {
             ReturnHome();
-            boardDrawnEvent.Raise();
+            _bus.Fire<BoardDrawnSignal>();
         }
 
-
+        /* ---------- Return -------------------------------------------- */
         void ReturnHome()
         {
-            if (clickClip)          
-                sfxSrc.PlayOneShot(clickClip);
-            _st = State.Idle;
-            Kill();
+            if (clickClip) _bus.Fire(new PlaySfxSignal(clickClip));
+            _state = State.Idle;
+            KillTweens();
+
             DOTween.Sequence()
-                .Append(transform.DOMove(_origPos, liftDur).SetEase(Ease.InOutQuad))
-                .Join(transform.DORotateQuaternion(_origRot, liftDur).SetEase(Ease.InOutQuad));
+                   .Append(transform.DOMove(_origPos, liftDur).SetEase(Ease.InOutQuad))
+                   .Join(transform.DOLocalRotateQuaternion(_origLocalRot, liftDur)
+                                   .SetEase(Ease.InOutQuad));
         }
+
+        /* ---------- helpers ------------------------------------------- */
         void CacheWaypoints()
         {
             int c = writePathParent.childCount;
@@ -175,11 +184,14 @@ namespace Clickables {
             for (int i = 0; i < c; ++i)
                 _wps[i] = writePathParent.GetChild(i).position;
         }
-        void Kill() {
+
+        void KillTweens()
+        {
             _lift?.Kill();
             _fade?.Kill();
             _write?.Kill();
-            _wobble?.Kill();    
+            _wobble?.Kill();
+            _ampTween?.Kill();
         }
     }
 }
