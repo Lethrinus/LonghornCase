@@ -18,7 +18,7 @@ namespace Clickables
         protected override void OnValidClick()
         {
             _reveal?.Reveal("hello!");
-            pen.TriggerWrite();            // let the pen handle its own signals / audio
+            pen.TriggerWrite();          
         }
     }
 }

@@ -1,4 +1,3 @@
-// Assets/Scripts/Installers/GameSignalInstaller.cs
 using Infrastructure.Signals;
 using Zenject;
 

@@ -1,4 +1,4 @@
-// Assets/Scripts/Clickables/BlinkingDot.cs
+
 using DG.Tweening;
 using Infrastructure.Signals;
 using Managers;
@@ -33,9 +33,9 @@ namespace Clickables
             _pulse?.Kill();
 
             if (_bus != null)
-                _bus.Fire<DotClickedSignal>();   // Injection geldiyse sinyal gönder
+                _bus.Fire<DotClickedSignal>();   
             else
-                GameManager.Instance.GotoCompleted(); // çok olağan dışı durumda yedek
+                GameManager.Instance.GotoCompleted(); 
 
             gameObject.SetActive(false);
         }

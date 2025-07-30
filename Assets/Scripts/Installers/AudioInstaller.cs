@@ -1,4 +1,4 @@
-// Assets/Scripts/Installers/AudioInstaller.cs
+
 using Infrastructure.Audio;
 using UnityEngine;
 using Zenject;

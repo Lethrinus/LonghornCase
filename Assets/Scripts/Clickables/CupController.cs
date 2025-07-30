@@ -1,4 +1,4 @@
-// Assets/Scripts/Clickables/CupController.cs
+
 using System;
 using DG.Tweening;
 using Infrastructure.Signals;

@@ -1,4 +1,4 @@
-// Assets/Scripts/Clickables/ClickableSfx.cs
+
 using Configs;
 using Infrastructure.Signals;
 using Managers;

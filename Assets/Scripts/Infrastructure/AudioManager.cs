@@ -1,4 +1,4 @@
-// Assets/Scripts/Infrastructure/Audio/AudioManager.cs
+
 using Infrastructure.Signals;
 using UnityEngine;
 using Zenject;
@@ -8,7 +8,7 @@ namespace Infrastructure.Audio
     public sealed class AudioManager : IInitializable, ILateDisposable
     {
         readonly SignalBus   _bus;
-        readonly AudioSource _template;     // ana kaynak (mixer ayarlarını kopyalamak için)
+        readonly AudioSource _template;     
 
         public AudioManager(SignalBus bus, AudioSource template)
         {
@@ -19,7 +19,7 @@ namespace Infrastructure.Audio
         public void Initialize()  => _bus.Subscribe<PlaySfxSignal>(PlayOneShot);
         public void LateDispose() => _bus.Unsubscribe<PlaySfxSignal>(PlayOneShot);
 
-        /* ---------- her çağrıda geçici kaynak yarat ------------------- */
+        
         void PlayOneShot(PlaySfxSignal s)
         {
             if (s.Clip == null) return;

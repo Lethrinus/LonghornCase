@@ -30,6 +30,6 @@ namespace Infrastructure.Signals
     public struct PenClickedSignal          {}
     public struct PenHoverCanceledSignal    {}
     public struct BoardDrawnSignal          {}
-    
+    /* ---------- dot / door -------------------------------------------- */
     public struct DotClickedSignal          {} 
 }

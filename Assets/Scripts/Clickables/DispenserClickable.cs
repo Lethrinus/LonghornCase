@@ -1,4 +1,3 @@
-// Assets/Scripts/Clickables/DispenserClickable.cs
 using Managers;
 using UnityEngine;
 

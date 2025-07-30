@@ -1,12 +1,9 @@
-// Assets/Scripts/State/StateTransitions.cs
 using Infrastructure.Signals;
 using Managers;
 using UnityEngine;
 using Zenject;
 
-/// <summary>
-/// Drives the GameManager state machine using SignalBus events.
-/// </summary>
+
 public sealed class StateTransitions : MonoBehaviour
 {
     [Inject] private SignalBus _bus;

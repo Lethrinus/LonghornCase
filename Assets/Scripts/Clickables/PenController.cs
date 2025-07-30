@@ -1,4 +1,4 @@
-// Assets/Scripts/Clickables/PenController.cs
+
 using DG.Tweening;
 using Infrastructure.Signals;
 using Managers;
@@ -92,7 +92,7 @@ namespace Clickables
             _state = State.Hovering;
             KillTweens();
 
-            _amp = 0f;                                // wobble genliği fade‑in
+            _amp = 0f;                               
 
             float startY  = transform.position.y;
             float targetY = startY + liftHeight;
@@ -137,11 +137,11 @@ namespace Clickables
             var seq = DOTween.Sequence()
                              .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
 
-            /* 1️⃣ Yumuşak local dönüş */
+        
             seq.Append(transform.DOLocalRotateQuaternion(_localBoardFacing, rotateDur)
                                 .SetEase(rotateEase));
 
-            /* 2️⃣ Yazma path’i (world space) */
+           
             seq.Append(transform.DOPath(_wps, writeDur, PathType.CatmullRom)
                                 .SetLookAt(.05f)
                                 .SetEase(Ease.InOutQuad)
